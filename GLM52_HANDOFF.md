@@ -32,7 +32,27 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — MP4 + realtime verified live; webhook needs secret on Vercel
+## Latest — Stripe webhook smoke-tested live on production ✅
+
+- **`STRIPE_WEBHOOK_SECRET` now set on Vercel** (added via API: production
+  target, value = the `charming-spark-snapshot` secret `whsec_o855…TOhZ`) and
+  redeployed via `vercel --prod` (alias `adswish-lake.vercel.app`).
+- **Webhook smoke test passes end-to-end on production** — `scripts/webhook-smoke-test.mjs`
+  (13/13 checks): bad signature → **400**; correctly-signed fabricated events for
+  `charge.refunded`, `payment_intent.payment_failed`, `payment_intent.succeeded`,
+  `charge.dispute.closed`, `account.updated`, `checkout.session.completed` all
+  → **200 `received:true`**; each replay → **`duplicate:true`** (idempotency works).
+  No real money touched — fabricated IDs, handlers no-op on unknown objects.
+- **⚠ Stripe Destinations cleanup:** two destinations point at the same URL.
+  Keep **`charming-spark-snapshot`** (18 events, full payloads — what the
+  handlers read). Delete **`charming-spark-thin`** (15 events, ID-only thin
+  payloads the handlers can't parse → would 400 and double-deliver). The Stripe
+  API lists only ONE webhook endpoint (`we_1U5wIZ…`, 18 events) — the thin one
+  exists in the new Destinations UI only.
+- **Google sign-in:** Supabase half fully verified (correct redirect_uri sent to
+  Google). Will's Google Cloud save is the only remaining step.
+
+## Earlier — MP4 + realtime verified live; webhook needed secret on Vercel
 
 - **MP4 upload E2E verified on production:** creator cookie →
   `POST /api/internal/deliverables/:id/upload` with a 24-byte MP4 → **201**,
