@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, Check } from "lucide-react";
+import { Loader2, Upload, Check, Music2, Instagram, Link2 } from "lucide-react";
 
 type Platform = "tiktok" | "instagram" | "youtube";
 
@@ -30,16 +30,34 @@ const TIER_LABELS: Record<string, { label: string; color: string }> = {
   macro: { label: "Macro (100K+)", color: "text-warning" },
 };
 
-export default function ConnectSocialPage() {
+function ConnectSocialPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<Platform | null>(null);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("tiktok");
   const [handle, setHandle] = useState("");
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [tier, setTier] = useState<"micro" | "mid" | "macro" | null>(null);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+  const err = searchParams.get("error");
+  const oauthError = err === "tiktok_not_configured"
+    ? "TikTok Connect isn't set up yet — add your TikTok API keys in Settings to enable it. You can still connect manually below."
+    : err === "instagram_not_configured"
+      ? "Instagram Connect isn't set up yet — add your Instagram API keys in Settings to enable it. You can still connect manually below."
+      : err === "token_exchange_failed"
+        ? "We couldn't finish connecting that account. Please try again."
+        : err
+          ? `Connection failed (${err}). Please try again.`
+          : null;
+
+  function startOAuth(platform: Platform) {
+    if (!userId || oauthLoading) return;
+    setOauthLoading(platform);
+    router.push(`/api/internal/oauth/${platform}?redirect_to=${encodeURIComponent("/onboarding/creator/connect_social")}`);
+  }
 
   useEffect(() => {
     async function loadData() {
@@ -186,6 +204,59 @@ export default function ConnectSocialPage() {
           </div>
         )}
 
+        {oauthError && (
+          <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+            {oauthError}
+          </div>
+        )}
+
+        <div className="mb-4 space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Connect automatically
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => startOAuth("tiktok")}
+              disabled={!userId || oauthLoading !== null}
+            >
+              {oauthLoading === "tiktok" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Music2 className="h-4 w-4" />
+              )}
+              Connect with TikTok
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => startOAuth("instagram")}
+              disabled={!userId || oauthLoading !== null}
+            >
+              {oauthLoading === "instagram" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Instagram className="h-4 w-4" />
+              )}
+              Connect with Instagram
+            </Button>
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Link2 className="h-3.5 w-3.5" />
+            Auto-connect fetches your handle and follower count directly. If a platform isn&apos;t
+            configured, use the manual form below instead.
+          </p>
+        </div>
+
+        <div className="mb-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs text-muted-foreground">or connect manually</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Platform</Label>
@@ -270,5 +341,13 @@ export default function ConnectSocialPage() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+export default function ConnectSocialPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
+      <ConnectSocialPageInner />
+    </Suspense>
   );
 }

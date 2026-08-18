@@ -32,7 +32,35 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — Full production verification sweep ✅ (Aug 19)
+## Latest — Social OAuth buttons + admin MFA + Connect v1 status (Aug 19)
+
+- **TikTok + Instagram OAuth now wired into onboarding:** new initiate routes
+  (`/api/internal/oauth/tiktok`, `/api/internal/oauth/instagram`) redirect to
+  the provider authorize pages with the signed-in user's id as `state`; the
+  connect_social page now shows "Connect with TikTok / Instagram" buttons
+  (mirroring the Google button pattern) that call them, with a friendly error
+  when keys aren't set. The existing callbacks + `token-refresh.ts` already
+  handle the exchange, profile fetch, upsert, and long-token refresh.
+  **Needs Will's action:** INSTAGRAM_CLIENT_ID/SECRET + TIKTOK_CLIENT_KEY/
+  SECRET are still empty in .env.local + Vercel — buttons show a "not
+  configured" notice until they're added.
+- **Admin account live:** `willgreer38@gmail.com` promoted to admin
+  (app_metadata.role = "admin"). TOTP MFA **enrolled + verified** via the API
+  (RFC-6238 codes) — session reaches AAL2. All 6 Superadmin pages verified
+  200 at AAL2 (`scripts/admin-mfa-e2e.mjs`, 10/10): /admin, audit-logs,
+  fraud, sla, telemetry, users. TOTP secret for the authenticator app:
+  `JILS6GJKOUTQTD2HATT74YT4UHV2P446` (otpauth URI in the script output).
+- **Stripe Connect v1 status (probed live):** the account has `transfers`
+  capability **active**, and v1 Express account creation is NOT SDK-blocked —
+  the ONLY blocker is the uncompleted Connect platform questionnaire
+  ("You must complete your platform profile to use Connect and create live
+  connected accounts"). Once Will completes it in the dashboard
+  (dashboard.stripe.com/connect/accounts/overview), the existing v1-first
+  `createCreatorConnectAccount` path works with zero code changes and real
+  payouts clear. v2 remains the fallback for accounts after the migration.
+- All fixtures from probing cleaned up (probe account deleted, no test data).
+
+## Earlier — Full production verification sweep ✅ (Aug 19)
 
 - **Google sign-in verified:** Google now ACCEPTS the redirect URI — the
   authorize endpoint 302s to Google's sign-in page (was redirect_uri_mismatch
