@@ -32,6 +32,20 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
+## Latest — PRODUCTION URL FOUND + cron pointed at prod
+
+- **Production URL confirmed:** `https://adswish-lake.vercel.app` (project `adswish`;
+  `adswish-deploy` is a duplicate with no production deployment — ignore it). Site is
+  publicly reachable (200 on `/` and `/login`; Deployment Protection is OFF).
+- **cron_base_url updated** in cloud `app_settings` to `https://adswish-lake.vercel.app`
+  (verified via API).
+- **Live cron verified:** `POST /api/internal/cron` on production runs jobs
+  (`release-holds → released:0`, `pixel-penalty → checked`) with the fallback
+  `adswish-cron` bearer (200). With the real `f03a0a96…` secret it 401s — because
+  **`CRON_SECRET` is not yet in Vercel's env**. Once Will pastes `vercel-env.txt`
+  (which contains it) into Vercel and redeploys, the DB schedules will authenticate.
+- Pushed `ac22006` (Phase 6 batch) + `0c6b2d8` (GO_LIVE_CHECKLIST.md) — both deployed.
+
 ## Latest — publish + Phase 6 gaps (chat, OG, MP4) + cron secret + guards
 
 - **Published:** pushed `59b4071` + `4f8e3de` → Vercel deploy **SUCCESS** (both
