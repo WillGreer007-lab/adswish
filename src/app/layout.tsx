@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, IBM_Plex_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { TanStackQueryProvider } from "@/lib/providers/tanstack-query-provider";
 import { TelemetryProvider } from "@/components/telemetry/telemetry-provider";
 import "./globals.css";
@@ -67,6 +68,7 @@ export default function RootLayout({
         <TanStackQueryProvider>
           <TelemetryProvider>{children}</TelemetryProvider>
         </TanStackQueryProvider>
+        <Analytics />
       </body>
     </html>
   );
