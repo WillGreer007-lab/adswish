@@ -30,6 +30,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# ready-to-paste env dump for Vercel — contains real secrets, never commit
+vercel-env.txt
+
 # vercel
 .vercel
 
