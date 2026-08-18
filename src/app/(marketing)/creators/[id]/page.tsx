@@ -1,8 +1,52 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Users, Video } from "lucide-react";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createSupabaseServerClient();
+  const { data: profile } = await supabase
+    .from("creator_profiles")
+    .select("display_name, bio, profile_picture_url, niches")
+    .eq("user_id", id)
+    .is("deleted_at", null)
+    .single();
+
+  if (!profile) return { title: "Creator not found — Adswish" };
+
+  const name = profile.display_name ?? "Creator";
+  const niche = Array.isArray(profile.niches) ? (profile.niches[0] as string | undefined) : undefined;
+  const description =
+    profile.bio ||
+    (niche
+      ? `${name} is a ${niche} creator on Adswish.`
+      : `${name} is a creator on Adswish.`);
+  const image = profile.profile_picture_url || undefined;
+
+  return {
+    title: `${name} — Adswish creator`,
+    description,
+    openGraph: {
+      title: `${name} — Adswish creator`,
+      description,
+      type: "profile",
+      images: image ? [{ url: image, alt: name }] : undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} — Adswish creator`,
+      description,
+      images: image ? [image] : undefined,
+    },
+  };
+}
 
 const tierConfig: Record<string, { label: string; color: string }> = {
   micro: { label: "Micro", color: "bg-muted text-muted-foreground" },

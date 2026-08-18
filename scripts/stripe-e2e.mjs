@@ -6,6 +6,9 @@
 // Covers: payment, transfer, refund, chargeback, and subscription
 // create/upgrade/cancel.
 
+import { assertTestMode } from "./guard-live-keys.mjs";
+assertTestMode();
+
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";

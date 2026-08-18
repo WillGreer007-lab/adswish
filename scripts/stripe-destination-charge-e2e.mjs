@@ -7,6 +7,9 @@
 // then deletes everything it created.
 //
 // Requires the dev server on http://localhost:3000.
+import { assertTestMode } from "./guard-live-keys.mjs";
+assertTestMode();
+
 import { readFileSync } from "node:fs";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";

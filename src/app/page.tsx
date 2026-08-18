@@ -668,6 +668,52 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Chrome extension — install in 3 clicks */}
+      <section id="extension" className="border-b border-border py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="fade-in-up mx-auto max-w-2xl text-center">
+            <Badge variant="outline" className="mb-3">
+              <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary"></span>
+              Adswish Tracker — Chrome extension
+            </Badge>
+            <h3 className="font-heading text-2xl font-bold sm:text-3xl">
+              Attribution without touching your site.
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No script tags, no GTM, no developer. Install the extension, connect your
+              business, and conversions get attributed automatically.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {[
+              { step: "1", title: "Install the extension", desc: "Load it from the Chrome Web Store (or unpacked from chrome://extensions in dev)." },
+              { step: "2", title: "Connect your business", desc: "Paste your API URL and Business ID from Settings → Tracking into the extension options." },
+              { step: "3", title: "Track automatically", desc: "It captures your /t/ links, heartbeats your pixel, and fires conversions — zero site code." },
+            ].map((s, i) => (
+              <div key={s.step} className="fade-in-up rounded-lg border border-border bg-surface p-6 card-lift" style={{ transitionDelay: `${i * 80}ms` }}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-heading text-lg font-bold text-primary">
+                  {s.step}
+                </div>
+                <h4 className="mt-4 font-heading text-base font-semibold">{s.title}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button size="sm" className="btn-slide" onClick={() => window.open("https://chrome.google.com/webstore", "_blank")}>
+              Get it on the Chrome Web Store
+            </Button>
+            <Link href="/dashboard/business/tracking">
+              <Button size="sm" variant="outline" className="card-lift">
+                Settings → Tracking
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Guides */}
       <section id="guides" className="border-b border-border py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

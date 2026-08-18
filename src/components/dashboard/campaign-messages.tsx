@@ -1,82 +1,129 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/dashboard/dashboard-shell";
+import { CampaignChat } from "@/components/dashboard/campaign-chat";
 import { MessageSquare } from "lucide-react";
 
-type MessageRow = {
+type CampaignWithMessages = {
   id: string;
-  body: string;
-  sender_id: string;
-  created_at: string;
-  campaign_id: string;
-  campaigns: { name: string } | { name: string }[] | null;
+  name: string;
+  messages: {
+    id: string;
+    body: string;
+    sender_id: string;
+    created_at: string;
+    campaign_id: string;
+  }[];
 };
 
-function campaignName(c: { name: string } | { name: string }[] | null): string {
+function campaignName(
+  c: { name: string } | { name: string }[] | null,
+): string {
   if (!c) return "Campaign";
   return Array.isArray(c) ? (c[0]?.name ?? "Campaign") : c.name;
 }
 
+/**
+ * Messages page body. Loads every campaign the user participates in with its
+ * last 50 messages (server-side), then renders a per-campaign chat panel that
+ * is live via Supabase Realtime with a polling fallback.
+ */
 export async function CampaignMessages({ userId }: { userId: string }) {
   const supabase = await createSupabaseServerClient();
 
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("id, body, sender_id, created_at, campaign_id, campaigns(name)")
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  const rows = (messages ?? []) as MessageRow[];
-
-  // Resolve sender display names from both profile tables.
-  const senderIds = [...new Set(rows.map((m) => m.sender_id))];
-  const [creators, businesses] = await Promise.all([
-    senderIds.length
-      ? supabase.from("creator_profiles").select("user_id, display_name").in("user_id", senderIds)
-      : { data: [] },
-    senderIds.length
-      ? supabase.from("business_profiles").select("user_id, company_name").in("user_id", senderIds)
-      : { data: [] },
+  // Campaigns the user participates in: owned (business) or accepted (creator).
+  const [{ data: owned }, { data: accepted }] = await Promise.all([
+    supabase
+      .from("campaigns")
+      .select("id, name, status")
+      .eq("business_id", userId)
+      .in("status", ["active", "paused_budget", "new_applications", "all_activity", "paused"]),
+    supabase
+      .from("applications")
+      .select("campaign_id, campaigns(id, name, status)")
+      .eq("creator_id", userId)
+      .eq("status", "accepted"),
   ]);
 
-  const nameBySender = new Map<string, string>();
-  for (const c of (creators.data ?? []) as { user_id: string; display_name: string }[]) {
-    nameBySender.set(c.user_id, c.display_name);
-  }
-  for (const b of (businesses.data ?? []) as { user_id: string; company_name: string }[]) {
-    nameBySender.set(b.user_id, b.company_name);
+  const ownedRows = (owned ?? []) as { id: string; name: string }[];
+  const acceptedRows = ((accepted ?? []) as {
+    campaign_id: string;
+    campaigns: { id: string; name: string } | { id: string; name: string }[] | null;
+  }[]).map((a) => {
+    const c = a.campaigns;
+    const row = Array.isArray(c) ? c[0] : c;
+    return row ? { id: row.id, name: row.name } : null;
+  }).filter((x): x is { id: string; name: string } => !!x);
+
+  const byId = new Map<string, string>();
+  for (const c of [...ownedRows, ...acceptedRows]) {
+    if (!byId.has(c.id)) byId.set(c.id, c.name);
   }
 
-  if (rows.length === 0) {
+  const campaigns = Array.from(byId, ([id, name]) => ({ id, name }));
+
+  if (campaigns.length === 0) {
     return (
       <EmptyState
         icon={MessageSquare}
-        title="No messages yet"
+        title="No conversations yet"
         description="Once a creator is accepted onto a campaign, you can chat with them here."
       />
     );
   }
 
+  // Last 50 messages per campaign.
+  const { data: allMessages } = await supabase
+    .from("messages")
+    .select("id, body, sender_id, created_at, campaign_id")
+    .in(
+      "campaign_id",
+      campaigns.map((c) => c.id),
+    )
+    .order("created_at", { ascending: true })
+    .limit(50 * campaigns.length);
+
+  const byCampaign = new Map<string, NonNullable<typeof allMessages>>();
+  for (const m of allMessages ?? []) {
+    const list = byCampaign.get(m.campaign_id) ?? [];
+    list.push(m);
+    byCampaign.set(m.campaign_id, list);
+  }
+
   return (
-    <div className="space-y-3">
-      {rows.map((m) => {
-        const isMe = m.sender_id === userId;
-        return (
-          <div key={m.id} className="rounded-lg border border-border bg-surface p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">
-                {isMe ? "You" : nameBySender.get(m.sender_id) ?? "Participant"}
-                <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {campaignName(m.campaigns)}
-                </span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(m.created_at).toLocaleString()}
-              </p>
-            </div>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">{m.body}</p>
-          </div>
-        );
-      })}
+    <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+      {/* Campaign list */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Conversations
+        </p>
+        {campaigns.map((c) => (
+          <a
+            key={c.id}
+            href={`#chat-${c.id}`}
+            className="block truncate rounded-md border border-border bg-surface px-3 py-2 text-sm hover:border-primary/50"
+          >
+            {c.name}
+          </a>
+        ))}
+      </div>
+
+      {/* Chat panels */}
+      <div className="space-y-6">
+        {campaigns.map((c) => (
+          <section
+            key={c.id}
+            id={`chat-${c.id}`}
+            className="rounded-lg border border-border bg-surface p-5"
+          >
+            <h2 className="mb-3 font-heading text-base font-semibold">{c.name}</h2>
+            <CampaignChat
+              campaignId={c.id}
+              userId={userId}
+              initial={(byCampaign.get(c.id) ?? []) as never}
+            />
+          </section>
+        ))}
+      </div>
     </div>
   );
 }

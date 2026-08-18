@@ -32,6 +32,48 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
+## Latest — publish + Phase 6 gaps (chat, OG, MP4) + cron secret + guards
+
+- **Published:** pushed `59b4071` + `4f8e3de` → Vercel deploy **SUCCESS** (both
+  `adswish` and `adswish-deploy` checks green on GitHub). Note: deployment is
+  behind Vercel Deployment Protection (302 → Vercel SSO for anonymous probes),
+  so the production alias must come from Will's Vercel dashboard before pointing
+  cron at it.
+- **CRON_SECRET set + synced (migration 019 APPLIED):** `app_settings.cron_secret`
+  generated DB-side; every pg_cron schedule now reads BOTH `cron_base_url` and
+  `cron_secret` from app_settings at execution time (no more hardcoded
+  `adswish-cron`). The same value is in `.env.local` + `vercel-env.txt`
+  (verified match). `cron_base_url` still points at localhost until the deployed
+  URL is known: `UPDATE app_settings SET value='https://<url>' WHERE key='cron_base_url';`
+- **Live-key guard (scripts/guard-live-keys.mjs):** all 5 `scripts/stripe-*.mjs`
+  now call `assertTestMode()` — refuse to run (exit 1) when `.env.local` has
+  `sk_live_`/`pk_live_` keys unless `--force`. Live-verified: probe refused with
+  the live keys present.
+- **RLS zero-policy audit:** the 6 tables with RLS but no policies
+  (analytics_events, error_events, charge_retries, failed_jobs, revoked_jtis,
+  webhook_events) are **intentionally deny-all** — every access is server-side
+  via the service-role client (verified in code). No migration needed; not gaps.
+- **Phase 6 gaps closed:**
+  - **Realtime chat:** `POST /api/internal/messages` (PII filter + spam
+    detection via existing security.ts, 403 for non-participants, 429 for
+    repeated identical sends). New `CampaignChat` client component with
+    postgres_changes realtime + 5s polling fallback; `CampaignMessages` now
+    lists campaigns + per-campaign live chat. Migration `020_messages_realtime.sql`
+    APPLIED (messages added to supabase_realtime publication, verified).
+  - **Dynamic OG:** `generateMetadata` on `/(marketing)/creators/[id]` (title,
+    description from bio/niches, OG + Twitter cards, profile picture).
+  - **MP4 upload:** migration `021_deliverable_videos.sql` APPLIED (public
+    `deliverable-videos` bucket + `deliverables.video_url` column, verified) +
+    `POST /api/internal/deliverables/[id]/upload` (50MB cap, MP4-only,
+    creator-scoped, stamps video_url).
+- **Chrome extension:** zipped `chrome-extension/adswish-tracker-v1.1.0.zip`
+  (8 files, Web-Store-ready). Landing page got an “Install in 3 clicks” section
+  (id=extension) linking to Settings → Tracking + the Web Store.
+- **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
+  **141/141 tests** · build passes (64 static pages incl. new Settings hub).
+- **Pending:** commit these (guard, chat, OG, MP4, migrations 019–021, zip, landing)
+  and push after Will's OK; set cron_base_url once the production URL is known.
+
 ## Latest — AGENTS.md safety doc + RLS on public catalogs
 
 - **`AGENTS.md` rewritten as the mandatory pre-work doc for every agent** (Freebuff, GLM 5.2,

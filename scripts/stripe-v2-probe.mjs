@@ -1,3 +1,6 @@
+import { assertTestMode } from "./guard-live-keys.mjs";
+assertTestMode();
+
 import { readFileSync } from "node:fs";
 
 function env(key) {

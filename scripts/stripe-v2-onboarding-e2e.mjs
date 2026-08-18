@@ -7,6 +7,9 @@
 //   4. Exercise releaseConversion via the cron release-holds job, attempting a
 //      real transfer to the v2 account.
 //   5. Clean up all rows + the Stripe account.
+import { assertTestMode } from "./guard-live-keys.mjs";
+assertTestMode();
+
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
