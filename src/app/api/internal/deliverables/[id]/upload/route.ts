@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  createSupabaseServiceRoleClient,
+} from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
@@ -14,7 +17,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const supabase = createSupabaseServiceRoleClient();
+  // Cookie-based auth (browser caller) — same pattern as every /api/internal
+  // route. The service-role client has no session of its own.
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -23,10 +28,14 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Service-role client for the storage upload + stamp (bypasses storage
+  // policies for the user-owned path).
+  const serviceSupabase = createSupabaseServiceRoleClient();
+
   const { id } = await params;
 
   // Only the assigned creator may upload to their deliverable.
-  const { data: deliverable } = await supabase
+  const { data: deliverable } = await serviceSupabase
     .from("deliverables")
     .select("id, creator_id, status")
     .eq("id", id)
@@ -64,7 +73,7 @@ export async function POST(
   const bytes = Buffer.from(await file.arrayBuffer());
   const key = `${user.id}/${id}-${Date.now()}.mp4`;
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await serviceSupabase.storage
     .from("deliverable-videos")
     .upload(key, bytes, { contentType: "video/mp4", upsert: false });
 
@@ -72,13 +81,13 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = serviceSupabase.storage
     .from("deliverable-videos")
     .getPublicUrl(data.path);
 
   const videoUrl = urlData?.publicUrl ?? null;
 
-  await supabase
+  await serviceSupabase
     .from("deliverables")
     .update({ video_url: videoUrl })
     .eq("id", id);

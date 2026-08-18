@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { filterPII, detectSpam } from "@/lib/security";
 
 /**
@@ -9,7 +9,10 @@ import { filterPII, detectSpam } from "@/lib/security";
  * campaign participant (business owner or accepted creator).
  */
 export async function POST(request: NextRequest) {
-  const supabase = createSupabaseServiceRoleClient();
+  // Browser callers authenticate via the session cookie (same pattern as every
+  // other /api/internal route). RLS then enforces that the sender is a
+  // campaign participant.
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
