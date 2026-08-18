@@ -12,6 +12,26 @@
 > **All agents: read `AGENTS.md` FIRST** — it has the mandatory safety rules (live Stripe
 > keys!, do/don't list, verification gate, migration process).
 
+## Latest — extension in Settings + landing page + RLS everywhere
+
+- **RLS everywhere (audited live):** all 41 tables in the cloud DB have RLS enabled
+  (partitions inherit from `clicks_log`/`daily_conversion_rollups` parents; the 6
+  internal tables with zero policies — `analytics_events`, `error_events`, `charge_retries`,
+  `failed_jobs`, `revoked_jtis`, `webhook_events` — are intentionally deny-all,
+  service-role-only). Migration 018 (subscription_plans + app_settings) applied.
+- **Chrome extension now in Settings + landing page:**
+  - New **`/dashboard/settings`** hub page (business + creator nav both get a Settings
+    item; Profile kept with `User` icon). Cards: Notifications, Tracking & Attribution
+    (pixel + Chrome extension, business only), Payouts (creator only).
+  - **Landing page** pixel-promo section now advertises the extension: “One line of
+    code — or zero.” + a Chrome extension button next to Copy snippet / GTM template.
+  - Extension verified: manifest v3 valid, all 9 files present, payload shapes match
+    the API (`token`/`orderId`/`amount`/`attribution_method:"cookie"` is a valid
+    AttributionMethod), heartbeat→`/api/v1/pixel/ping` and track→`/api/v1/webhooks/
+    conversion` wired in background.js, optional host permissions requested at save.
+- **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
+  **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
+
 ## Latest — AGENTS.md safety doc + RLS on public catalogs
 
 - **`AGENTS.md` rewritten as the mandatory pre-work doc for every agent** (Freebuff, GLM 5.2,

@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   CreditCard,
   Radar,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
@@ -22,7 +23,8 @@ const CREATOR_NAV = [
   { label: "Earnings", href: "/dashboard/creator/earnings", icon: DollarSign },
   { label: "Payouts", href: "/dashboard/creator/payouts", icon: CreditCard },
   { label: "Messages", href: "/dashboard/creator/messages", icon: MessageSquare },
-  { label: "Profile", href: "/dashboard/creator/profile", icon: Settings },
+  { label: "Profile", href: "/dashboard/creator/profile", icon: User },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const BUSINESS_NAV = [
@@ -32,7 +34,8 @@ const BUSINESS_NAV = [
   { label: "Payments", href: "/dashboard/business/payments", icon: DollarSign },
   { label: "Tracking", href: "/dashboard/business/tracking", icon: Radar },
   { label: "Messages", href: "/dashboard/business/messages", icon: MessageSquare },
-  { label: "Profile", href: "/dashboard/business/profile", icon: Settings },
+  { label: "Profile", href: "/dashboard/business/profile", icon: User },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 export function DashboardShell({

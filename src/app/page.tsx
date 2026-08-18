@@ -625,7 +625,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pixel promo — like dropship's Chrome extension section */}
+      {/* Pixel + Chrome extension promo — like dropship's extension section */}
       <section className="border-b border-border py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="fade-in-up flex flex-col items-center justify-between gap-8 rounded-lg border border-border bg-surface p-8 md:flex-row">
@@ -636,13 +636,16 @@ export default function LandingPage() {
                   Pixel active
                 </Badge>
               </div>
-              <h3 className="font-heading text-xl font-bold">One line of code. Total attribution.</h3>
+              <h3 className="font-heading text-xl font-bold">One line of code — or zero.</h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Install the Adswish pixel with a single script tag, GTM container, or Shopify app embed. Edge-redirected links survive ad blockers.
+                Drop the pixel script, GTM container, or Shopify embed on your site — or install the{" "}
+                <strong className="font-medium text-foreground">Adswish Chrome extension</strong> and track
+                conversions with zero site code. Edge-redirected links survive ad blockers either way.
               </p>
               <div className="mt-4 flex gap-3">
                 <Button size="sm" className="btn-slide">Copy snippet</Button>
                 <Button size="sm" variant="outline" className="card-lift">GTM template</Button>
+                <Button size="sm" variant="outline" className="card-lift">Chrome extension</Button>
               </div>
             </div>
             <div className="w-full max-w-sm">
