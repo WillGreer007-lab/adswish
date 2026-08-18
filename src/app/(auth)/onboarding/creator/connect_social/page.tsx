@@ -1,0 +1,274 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, Upload, Check } from "lucide-react";
+
+type Platform = "tiktok" | "instagram" | "youtube";
+
+const PLATFORMS: { id: Platform; label: string }[] = [
+  { id: "tiktok", label: "TikTok" },
+  { id: "instagram", label: "Instagram" },
+  { id: "youtube", label: "YouTube" },
+];
+
+function getTier(followerCount: number): "micro" | "mid" | "macro" | null {
+  if (followerCount < 1000) return null;
+  if (followerCount < 10000) return "micro";
+  if (followerCount < 100000) return "mid";
+  return "macro";
+}
+
+const TIER_LABELS: Record<string, { label: string; color: string }> = {
+  micro: { label: "Micro (1K–9.9K)", color: "text-muted-foreground" },
+  mid: { label: "Mid (10K–99.9K)", color: "text-primary" },
+  macro: { label: "Macro (100K+)", color: "text-warning" },
+};
+
+export default function ConnectSocialPage() {
+  const router = useRouter();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>("tiktok");
+  const [handle, setHandle] = useState("");
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
+  const [tier, setTier] = useState<"micro" | "mid" | "macro" | null>(null);
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      const supabase = createSupabaseBrowserClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login?redirect=/onboarding");
+        return;
+      }
+      setUserId(user.id);
+
+      const { data: accounts } = await supabase
+        .from("creator_social_accounts")
+        .select("*")
+        .eq("creator_id", user.id);
+      setConnectedAccounts(accounts || []);
+
+      if (accounts && accounts.length > 0) {
+        const first = accounts[0];
+        setSelectedPlatform(first.platform);
+        setHandle(first.handle);
+        setFollowerCount(first.follower_count);
+        setTier(getTier(first.follower_count));
+      }
+    }
+    loadData();
+  }, [router]);
+
+  function handleFollowerInput(value: string) {
+    const count = parseInt(value, 10);
+    if (isNaN(count)) {
+      setFollowerCount(null);
+      setTier(null);
+      return;
+    }
+    setFollowerCount(count);
+    setTier(getTier(count));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!userId) return;
+
+    if (followerCount === null || followerCount < 1000) {
+      alert("You need at least 1,000 followers on at least one platform to join Adswish. If your platform doesn't expose follower count, upload a screenshot for manual verification.");
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createSupabaseBrowserClient();
+
+    let screenshotUrl: string | null = null;
+    if (screenshot) {
+      const fileName = `${userId}/verification_${selectedPlatform}.png`;
+      const { error: uploadError } = await supabase.storage
+        .from("creator-assets")
+        .upload(fileName, screenshot, { upsert: true });
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage
+          .from("creator-assets")
+          .getPublicUrl(fileName);
+        screenshotUrl = publicUrl;
+      }
+    }
+
+    const { error } = await supabase
+      .from("creator_social_accounts")
+      .upsert({
+        creator_id: userId,
+        platform: selectedPlatform,
+        handle,
+        follower_count: followerCount,
+        verified_at: new Date().toISOString(),
+        disconnected_at: null,
+      }, { onConflict: "creator_id,platform" });
+
+    if (error) {
+      console.error(error);
+      setLoading(false);
+      return;
+    }
+
+    if (screenshotUrl) {
+      await supabase.from("manual_follower_verifications").upsert({
+        creator_id: userId,
+        platform: selectedPlatform,
+        screenshot_url: screenshotUrl,
+        status: "pending",
+      }, { onConflict: "creator_id,platform" });
+    }
+
+    await supabase
+      .from("creator_profiles")
+      .update({
+        tier,
+        previous_tier: tier,
+        tier_changed_at: new Date().toISOString(),
+        onboarding_step: "plan_selection",
+      })
+      .eq("user_id", userId);
+
+    router.push("/onboarding/creator/plan_selection");
+  }
+
+  async function handleSkip() {
+    if (!userId) return;
+    const supabase = createSupabaseBrowserClient();
+    await supabase
+      .from("creator_profiles")
+      .update({ onboarding_step: "plan_selection" })
+      .eq("user_id", userId);
+    router.push("/onboarding/creator/plan_selection");
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle>Connect a social account</CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Step 2 of 4 — You need at least 1,000 followers to join.
+        </p>
+      </CardHeader>
+      <CardContent>
+        {connectedAccounts.length > 0 && (
+          <div className="mb-4 rounded-lg border border-border bg-muted/50 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Connected accounts
+            </p>
+            {connectedAccounts.map((acc) => (
+              <div key={acc.id} className="mt-2 flex items-center gap-2">
+                <Check className="h-4 w-4 text-success" />
+                <span className="text-sm capitalize">{acc.platform}</span>
+                <span className="text-sm text-muted-foreground">@{acc.handle}</span>
+                <span className="font-mono text-sm font-semibold">
+                  {acc.follower_count.toLocaleString()}
+                </span>
+                {getTier(acc.follower_count) && (
+                  <span className={`text-xs font-medium ${TIER_LABELS[getTier(acc.follower_count)!].color}`}>
+                    {TIER_LABELS[getTier(acc.follower_count)!].label}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Platform</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {PLATFORMS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setSelectedPlatform(p.id)}
+                  className={`rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
+                    selectedPlatform === p.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="handle">Your {selectedPlatform} handle</Label>
+            <Input
+              id="handle"
+              placeholder="@yourusername"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="followers">Follower count</Label>
+            <Input
+              id="followers"
+              type="number"
+              placeholder="e.g. 5000"
+              value={followerCount ?? ""}
+              onChange={(e) => handleFollowerInput(e.target.value)}
+              required
+            />
+            {tier && (
+              <p className={`text-sm font-medium ${TIER_LABELS[tier].color}`}>
+                Assigned tier: {TIER_LABELS[tier].label}
+              </p>
+            )}
+            {followerCount !== null && followerCount < 1000 && (
+              <p className="text-sm text-destructive">
+                You need at least 1,000 followers to join Adswish.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="screenshot">Verification screenshot (optional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Upload a screenshot of your profile showing follower count for manual verification.
+            </p>
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 hover:border-primary">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                {screenshot ? screenshot.name : "Choose file..."}
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+              />
+            </label>
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={handleSkip}>
+              Skip for now
+            </Button>
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : "Continue"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

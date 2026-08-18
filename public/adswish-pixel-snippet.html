@@ -1,0 +1,24 @@
+<!-- =====================================================================
+     Adswish tracking pixel — direct embed (v1)
+     Replace <APP_URL> with your deployed Adswish domain (e.g. app.adswish.com)
+     and <BUSINESS_ID> with the business's id from the Adswish dashboard.
+     Paste into the <head> of every page of the business's site.
+     ===================================================================== -->
+<script>
+  (function (w, d, id) {
+    var js = d.createElement("script");
+    js.async = true;
+    js.src = "https://<APP_URL>/pixel.js?id=" + encodeURIComponent(id);
+    js.onload = function () {
+      // Only pass consent:true after the user has opted in (GDPR). Until then
+      // the pixel runs analytics-only with no attribution cookie.
+      if (w.adswish) w.adswish.init({ consent: true, attributionDays: 30 });
+    };
+    d.head.appendChild(js);
+  })(window, document, "<BUSINESS_ID>");
+</script>
+
+<!-- On the checkout confirmation page, fire a conversion: -->
+<script>
+  // window.adswish && window.adswish.track({ orderId: "ORDER_123", amount: 99.99 });
+</script>

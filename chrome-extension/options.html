@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Adswish Tracker — Options</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, sans-serif; max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
+      h1 { margin: 0 0 0.25rem; }
+      .sub { opacity: 0.7; margin: 0 0 1.5rem; }
+      h2 { font-size: 1rem; margin: 1.5rem 0 0.25rem; }
+      label { display: block; font-weight: 600; margin: 1rem 0 0.35rem; }
+      input { width: 100%; box-sizing: border-box; padding: 0.5rem; font-size: 1rem; }
+      button { margin-top: 1.25rem; padding: 0.6rem 1.2rem; font-size: 1rem; cursor: pointer; }
+      .hint { font-size: 0.85rem; opacity: 0.7; margin-top: 0.25rem; }
+      #status { margin-top: 0.75rem; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Adswish Tracker — Options</h1>
+    <p class="sub">Point the extension at your Adswish app and the site it should watch.</p>
+
+    <h2>Connection</h2>
+    <label for="apiBase">Adswish API base URL</label>
+    <input id="apiBase" type="text" placeholder="https://your-app.com (or http://localhost:3000 in dev)" />
+    <div class="hint">The same origin that serves /pixel.js.</div>
+
+    <label for="businessId">Business ID</label>
+    <input id="businessId" type="text" placeholder="your business account UUID" />
+    <div class="hint">Shown on your Adswish <em>Tracking</em> settings page.</div>
+
+    <label for="siteDomain">Tracked site domain</label>
+    <input id="siteDomain" type="text" placeholder="e.g. yourstore.com" />
+    <div class="hint">The site where conversions happen. The extension requests access to this domain + the API URL above.</div>
+
+    <h2>Auto-detect conversions <em>(optional, no code)</em></h2>
+    <label for="confirmUrlPattern">Order-confirmation URL pattern</label>
+    <input id="confirmUrlPattern" type="text" placeholder="e.g. /thank-you or order/confirmed" />
+    <div class="hint">A substring of the URL shown after checkout. When it matches, the extension looks for the order total.</div>
+
+    <label for="amountSelector">Order amount selector</label>
+    <input id="amountSelector" type="text" placeholder="e.g. .order-total, [data-total]" />
+    <div class="hint">A CSS selector for the element holding the order total (text like $99.99).</div>
+
+    <button id="save">Save &amp; request site access</button>
+    <div id="status"></div>
+
+    <script src="options.js"></script>
+  </body>
+</html>

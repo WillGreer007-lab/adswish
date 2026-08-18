@@ -1,0 +1,20 @@
+<!-- =====================================================================
+     Adswish tracking pixel — Google Tag Manager Custom HTML tag (v1)
+
+     In GTM: Tags → New → "Custom HTML", paste this, and set the trigger to
+     "All Pages". Replace <APP_URL> and <BUSINESS_ID>.
+     For the conversion event, create a second Custom HTML tag that calls
+     window.adswish.track({ orderId, amount }) and fire it on your
+     purchase-confirmation trigger.
+     ===================================================================== -->
+<script>
+  (function (w, d, id) {
+    var js = d.createElement("script");
+    js.async = true;
+    js.src = "https://<APP_URL>/pixel.js?id=" + encodeURIComponent(id);
+    js.onload = function () {
+      if (w.adswish) w.adswish.init({ consent: true, attributionDays: 30 });
+    };
+    d.head.appendChild(js);
+  })(window, document, "<BUSINESS_ID>");
+</script>
