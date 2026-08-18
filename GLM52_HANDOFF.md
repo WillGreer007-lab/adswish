@@ -32,6 +32,28 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
+## Latest — LIVE VERIFICATION (production) + auth fix
+
+- **Env vars are live on Vercel** (team-level shared → redeploy via `a03951e`
+  baked them in). Cron with the real secret now returns **200** (was 401).
+- **BUG FOUND + FIXED (`aaf8ebf`, deployed):** the messages and deliverable-upload
+  routes called `getUser()` on the **service-role client**, which has no session —
+  every browser call 401'd. Both now authenticate via cookie-based
+  `createSupabaseServerClient()` (service-role client only for writes).
+- **Chat E2E verified live on `https://adswish-lake.vercel.app`:**
+  - Send → **201** (business account, real campaign)
+  - PII redaction works: `john@example.com` / `555-123-4567` stored as `[REDACTED]`
+  - Spam rejection → **429** on the 4th identical message
+  - Creator reads messages → 200 (RLS participant)
+  - Realtime publication on `messages` confirmed (migration 020)
+  - Test messages cleaned up after verification
+- **Cookie format note for future E2E scripts:** @supabase/ssr cookies are
+  `sb-<ref>-auth-token=base64-<base64url(JSON session)>` (note the `base64-` prefix).
+- **Google sign-in (Supabase half):** authorize → 302 to Google with the correct
+  `redirect_uri=https://kzydyzugcyiuheltfxko.supabase.co/auth/v1/callback`; Supabase
+  `site_url` + allowlist updated to production. Only Will's Google-Cloud save remains.
+- Verification gate: typecheck clean · lint 0 errors · **141/141 tests** · build 64/64.
+
 ## Latest — PRODUCTION URL FOUND + cron pointed at prod
 
 - **Production URL confirmed:** `https://adswish-lake.vercel.app` (project `adswish`;
