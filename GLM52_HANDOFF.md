@@ -1,7 +1,30 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## LIVE STRIPE KEYS — Aug 18 2026
+
+- `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `.env.local` and `vercel-env.txt` are now the **live** (`sk_live_`/`pk_live_`) keys, verified against the Stripe API.
+- ⚠️ Live account settles in **GBP** (not USD). Added `STRIPE_CURRENCY=gbp` to both files; all Stripe calls (charges, transfers, v2 account creation, campaign currency) now read `getStripeCurrency()` (default `usd`). Commit `21292e2` pushed.
+- ⚠️ **Never run the E2E/probe scripts (`scripts/stripe-*.mjs`) while live keys are in `.env.local`** — they charge/move real money. Use them only in test mode.
+- TODO for Vercel: add `STRIPE_CURRENCY=gbp` + the live keys to the project env vars (they are gitignored, so push does not carry them).
+
 > Read this first. This is a living handoff file — updated as work progresses.
 > Master source of truth for scope: `ADSWISH_MASTER_BLUEPRINT_v4.md`.
+> **All agents: read `AGENTS.md` FIRST** — it has the mandatory safety rules (live Stripe
+> keys!, do/don't list, verification gate, migration process).
+
+## Latest — AGENTS.md safety doc + RLS on public catalogs
+
+- **`AGENTS.md` rewritten as the mandatory pre-work doc for every agent** (Freebuff, GLM 5.2,
+  others): CRITICAL section on the live `sk_live_` keys in `.env.local` (never run
+  `scripts/stripe-*.mjs` or trigger browser charges while live — real money, GBP account),
+  the mandatory verification gate (`typecheck → lint → test → build`), the do/don't list,
+  the money-movement flow map, and how to check key mode before Stripe actions.
+- **RLS gap closed (migration `018_subscription_plans_rls.sql`, APPLIED to cloud, verified):**
+  `subscription_plans` and `app_settings` were created without RLS (Vercel/Supabase surfaced
+  `subscription_plans`). Both are public read-only catalogs → RLS enabled + public-read
+  policy, no write policies (service-role only). Verified live via `pg_policy` query.
+- **Live Stripe keys updated** in `.env.local` + `vercel-env.txt` (`sk_live_`/`pk_live_`,
+  verified; `STRIPE_CURRENCY=gbp` added — see top section).
 
 ## Latest — deploy guide + 3DS retry queue + tracking toggle + Phase 6 foundations
 
