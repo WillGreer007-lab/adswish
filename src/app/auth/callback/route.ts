@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { CookieOptions } from "@supabase/ssr";
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
@@ -78,7 +79,9 @@ async function createSupabaseServerClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(
+          cookiesToSet: { name: string; value: string; options: CookieOptions }[],
+        ) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options),
