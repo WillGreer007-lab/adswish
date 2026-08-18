@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { filterPII, detectSpam } from "@/lib/security";
 
 /**
@@ -85,6 +85,42 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Unread badge: notify the other participant(s) so their notification bell
+  // counts the new message. Uses the service-role client because RLS grants
+  // users read/update on their own notifications but no INSERT policy.
+  const serviceClient = createSupabaseServiceRoleClient();
+  if (biz) {
+    // Sender is the business owner → notify accepted creators.
+    const { data: accepted } = await serviceClient
+      .from("applications")
+      .select("creator_id")
+      .eq("campaign_id", campaignId)
+      .eq("status", "accepted");
+    for (const a of accepted ?? []) {
+      await serviceClient.from("notifications").insert({
+        user_id: a.creator_id,
+        type: "message",
+        body: "New message on your campaign conversation.",
+        link: `/dashboard/creator/messages#chat-${campaignId}`,
+      });
+    }
+  } else {
+    // Sender is an accepted creator → notify the business owner.
+    const { data: campaign } = await serviceClient
+      .from("campaigns")
+      .select("business_id")
+      .eq("id", campaignId)
+      .single();
+    if (campaign) {
+      await serviceClient.from("notifications").insert({
+        user_id: campaign.business_id,
+        type: "message",
+        body: "New message from a creator on your campaign.",
+        link: `/dashboard/business/messages#chat-${campaignId}`,
+      });
+    }
   }
 
   return NextResponse.json({ ok: true, message, pii_detected: pii.detected, pii_types: pii.detectedTypes }, { status: 201 });
