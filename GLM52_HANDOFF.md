@@ -32,7 +32,35 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — Stripe webhook smoke-tested live on production ✅
+## Latest — Full production verification sweep ✅ (Aug 19)
+
+- **Google sign-in verified:** Google now ACCEPTS the redirect URI — the
+  authorize endpoint 302s to Google's sign-in page (was redirect_uri_mismatch
+  before). Will's Google Cloud save went through.
+- **Webhook smoke test re-ran 13/13 ✅** with the thin destination deleted.
+- **Real live webhook delivery confirmed:** created + cancelled a live
+  PaymentIntent (no money moved) — Stripe delivered `payment_intent.created`
+  (`evt_3U5wVEL…`) to the production endpoint and it was recorded.
+- **Multi-role regression sweep 33/33 ✅** (`scripts/regression-sweep.mjs`):
+  all business + creator dashboard pages 200 (or correct role redirect), all
+  admin pages gate correctly (unauth → /login, non-admin → /dashboard).
+- **Unread badges now work end-to-end (real fix):**
+  - BUG: the messages send route never created a notification, so the bell
+    badge never incremented. Fixed — send route now inserts a `message`
+    notification for the recipient(s) via the service-role client (RLS has no
+    INSERT policy on notifications). Deployed `fc24dd8`.
+  - BUG: `notifications` was NOT in the supabase_realtime publication, so the
+    notification center's realtime subscription silently never fired (only
+    REST on load). Fixed — migration 022 applied (publication now: messages,
+    notifications).
+  - Verified live (`scripts/chat-realtime-unread-test.mjs`, 8/8): business
+    sends → message arrives over creator's realtime socket → `message`
+    notification delivered over realtime, stored read=false (badge source),
+    creator reads via RLS. Fixtures auto-cleaned.
+- **Cleanup:** all fabricated webhook events, test campaigns/apps/messages,
+  and test notifications removed.
+
+## Earlier — Stripe webhook smoke-tested live on production ✅
 
 - **`STRIPE_WEBHOOK_SECRET` now set on Vercel** (added via API: production
   target, value = the `charming-spark-snapshot` secret `whsec_o855…TOhZ`) and
