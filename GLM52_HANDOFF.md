@@ -32,6 +32,26 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
+## Latest — MP4 + realtime verified live; webhook needs secret on Vercel
+
+- **MP4 upload E2E verified on production:** creator cookie →
+  `POST /api/internal/deliverables/:id/upload` with a 24-byte MP4 → **201**,
+  file in `deliverable-videos` bucket, public URL fetch 200, `video_url`
+  stamped on the deliverable. Fixtures (deliverable, object, app) cleaned up.
+- **Realtime chat verified end-to-end on production:** creator session
+  subscribed to `postgres_changes` on `messages` (WebSocket); business sent via
+  the production API → **event delivered instantly** with PII already redacted.
+  Note: realtime respects RLS — a listener must be an *accepted* campaign
+  participant (applications were pending, which is why earlier probes timed out).
+- **Stripe webhook endpoint is live** (400 on bad signature = handler running)
+  but **`STRIPE_WEBHOOK_SECRET` is NOT in Vercel** (missing from vercel-env.txt,
+  only the empty `_STAGING` var is there). Charge/refund/dispute smoke tests
+  cannot pass signature verification until Will adds the live webhook secret.
+- **Google sign-in:** Supabase half fully verified (correct redirect_uri sent to
+  Google). Will's Google Cloud save is the only remaining step.
+- Cleanup done: test messages, throwaway deliverable + video object, test
+  application, and the ef091dea application reverted to pending.
+
 ## Latest — LIVE VERIFICATION (production) + auth fix
 
 - **Env vars are live on Vercel** (team-level shared → redeploy via `a03951e`
