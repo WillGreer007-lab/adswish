@@ -114,9 +114,9 @@ const perks = [
 ];
 
 const guides = [
-  { eyebrow: "For Creators", title: "Getting your first campaign", desc: "How to set up your profile, connect socials, and start earning.", readTime: "5 min" },
-  { eyebrow: "For Businesses", title: "Launching your first campaign", desc: "From campaign creation to pixel installation to first sale.", readTime: "8 min" },
-  { eyebrow: "Engineering", title: "Pixel integration guide", desc: "Install the tracking pixel with GTM, Shopify, or direct embed.", readTime: "12 min" },
+  { eyebrow: "For Creators", title: "Getting your first campaign", desc: "How to set up your profile, connect socials, and start earning.", readTime: "5 min", href: "/guides/creators/getting-started" },
+  { eyebrow: "For Businesses", title: "Launching your first campaign", desc: "From campaign creation to pixel installation to first sale.", readTime: "8 min", href: "/guides/businesses/launching" },
+  { eyebrow: "Engineering", title: "Pixel integration guide", desc: "Install the tracking pixel with GTM, Shopify, or direct embed.", readTime: "12 min", href: "/guides/engineering/pixel-integration" },
 ];
 
 function useScrollReveal() {
@@ -686,7 +686,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="mt-1 font-heading text-lg font-semibold">{guide.title}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">{guide.desc}</p>
-                  <a href="#" className="mt-3 inline-flex items-center text-sm font-medium text-primary hover:underline">
+                  <a href={guide.href} className="mt-3 inline-flex items-center text-sm font-medium text-primary hover:underline">
                     Read guide <ArrowRight className="ml-1 h-3 w-3" />
                   </a>
                 </div>
