@@ -1,5 +1,14 @@
 import Stripe from "stripe";
 
+/**
+ * Active Stripe currency for charges/transfers. Defaults to USD; set
+ * STRIPE_CURRENCY (e.g. gbp) to match the platform account's settlement
+ * currency and avoid cross-currency conversion fees on live charges.
+ */
+export function getStripeCurrency(): string {
+  return (process.env.STRIPE_CURRENCY ?? "usd").toLowerCase();
+}
+
 export function getStripeClient(): Stripe {
   return new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2024-06-20" as Stripe.LatestApiVersion,
@@ -60,7 +69,7 @@ export async function createConnectedAccountV2(opts: {
         },
       },
       defaults: {
-        currency: "usd",
+        currency: getStripeCurrency(),
         responsibilities: {
           fees_collector: "application",
           losses_collector: "application",

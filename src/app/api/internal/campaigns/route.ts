@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getStripeCurrency } from "@/lib/stripe/client";
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -165,7 +166,7 @@ export async function POST(request: NextRequest) {
       total_spent: 0,
       visibility: base.visibility,
       niche: base.niche,
-      currency: "USD",
+      currency: getStripeCurrency().toUpperCase(),
       end_date: endDate,
       deliverable_count: base.deliverable_count,
       deadline_days: resolvedDeadlineDays,

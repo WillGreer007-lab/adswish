@@ -18,6 +18,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/stripe/client", () => ({
   getStripeClient: () => mockStripe.current,
+  getStripeCurrency: () => (process.env.STRIPE_CURRENCY ?? "usd").toLowerCase(),
   calculateCreatorCut: (n: number) => Math.round(n * 0.9 * 100) / 100,
 }));
 
@@ -266,7 +267,7 @@ describe("releaseConversion", () => {
     const ok = await releaseConversion("conv_r");
     expect(ok).toBe(true);
 
-    const transferCall = stripe.calls.find((c) => c.params.currency === "usd");
+    const transferCall = stripe.calls.find((c) => c.params.currency === (process.env.STRIPE_CURRENCY ?? "usd").toLowerCase());
     expect(transferCall?.params).toMatchObject({ amount: 9000, destination: "acct_1" });
 
     const released = supabase.updates.find(

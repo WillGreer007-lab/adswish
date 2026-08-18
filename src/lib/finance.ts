@@ -1,5 +1,5 @@
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
-import { getStripeClient, calculateCreatorCut } from "@/lib/stripe/client";
+import { getStripeClient, getStripeCurrency, calculateCreatorCut } from "@/lib/stripe/client";
 import { generateInvoicePdf } from "@/lib/invoice-pdf";
 import pino from "pino";
 
@@ -135,7 +135,7 @@ export async function releaseConversion(conversionId: string): Promise<boolean> 
         const stripe = getStripeClient();
         const transfer = await stripe.transfers.create({
           amount: Math.round(Number(conversion.creator_cut) * 100),
-          currency: "usd",
+          currency: getStripeCurrency(),
           destination: profile.stripe_account_id,
         });
         transferId = transfer.id;
@@ -429,7 +429,7 @@ export async function createDestinationChargeForConversion(conversionId: string)
 
     const pi = await stripe.paymentIntents.create({
       amount: Math.round(Number(conversion.order_amount) * 100),
-      currency: "usd",
+      currency: getStripeCurrency(),
       customer: business.stripe_customer_id,
       payment_method: defaultPm,
       confirm: true,
@@ -618,7 +618,7 @@ export async function processWeeklyPayouts(): Promise<number> {
         const stripe = getStripeClient();
         const transfer = await stripe.transfers.create({
           amount: Math.round(entry.total * 100),
-          currency: "usd",
+          currency: getStripeCurrency(),
           destination: profile.stripe_account_id,
         });
         transferId = transfer.id;
