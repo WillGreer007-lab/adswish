@@ -2,6 +2,19 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  // OAuth fallback: if Supabase delivered the code to the site root (site_url)
+  // because /auth/callback isn't in the project's redirect allowlist, forward it
+  // to the exchange route so sign-in still completes. (Guard the pathname so we
+  // don't re-forward /auth/callback itself — that would loop.)
+  if (
+    request.nextUrl.pathname !== "/auth/callback" &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
