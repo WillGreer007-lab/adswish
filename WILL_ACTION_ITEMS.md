@@ -120,4 +120,4 @@ Without the key, the third check shows "not configured" and is skipped — nothi
 ## ⚠️ Reminders
 
 - `.env.local` has **live Stripe keys** — never run `scripts/stripe-*.mjs` (they move real money).
-- Nothing above is deployed to Vercel yet. Preview at **http://localhost:3000**.
+- Audit commit `f3c4ecb` is pushed to `main`; public health routes returned 200 after the deploy wait. Add a real `VERCEL_TOKEN` only to local `.env.local` if you need the deploy script to report authenticated Vercel build state. Preview locally at **http://localhost:3000**.

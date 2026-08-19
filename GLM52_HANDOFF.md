@@ -1161,4 +1161,5 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - Migrations **032, 033, and 034 applied successfully** to Supabase. No fake campaigns, conversions, screenshots, or money movement created.
 - Creator plan usage now counts only accepted campaigns that are still active/paused, matching the enforced active-campaign cap and the Plan page explanation.
 - Remaining gaps and owner-only steps are recorded in `BLUEPRINT_GAP_AUDIT.md`; the homepage still has explicitly labelled illustrative demo cards, and admin moderation/status emails remain an open workflow.
-- Verification after the final cap fix: typecheck, lint, 162 tests, and production build all pass; deployment verification is still pending.
+- Verification after the final cap fix: typecheck, lint, 162 tests, and production build all pass.
+- Commit `f3c4ecb` is pushed to `main`; the public health check returned 200 for `/`, `/plans`, `/businesses`, `/creators`, `/login`, and `/signup` after the deploy wait. Vercel build-state/API confirmation remains blocked only by the missing owner-supplied `VERCEL_TOKEN`.
