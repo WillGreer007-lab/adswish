@@ -370,6 +370,7 @@ try {
     await gatePage.waitForURL((url) => url.pathname === "/admin/mfa-setup", { timeout: 15_000 }).catch(() => {});
     const landed = new URL(gatePage.url());
     const codeInput = gatePage.locator('input#code, input[placeholder="123456"]');
+    await codeInput.first().waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
     const codeVisible = await codeInput.first().isVisible().catch(() => false);
     record("admin", "/admin MFA gate", landed.pathname === "/admin/mfa-setup" && codeVisible,
       `landed ${landed.pathname}, code input ${codeVisible ? "visible" : "missing"}`);
