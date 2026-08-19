@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStripeCurrency } from "@/lib/stripe/client";
+import { evaluateFreePlanCampaignLimit } from "@/lib/campaign-limits";
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -118,20 +119,21 @@ export async function POST(request: NextRequest) {
   const currentMonth = new Date().toISOString().slice(0, 7);
 
   if (isFree && status === "active") {
-    const usedThisMonth = businessProfile.campaigns_created_month === currentMonth
-      ? businessProfile.campaigns_created_this_month
-      : 0;
+    const limit = evaluateFreePlanCampaignLimit(
+      {
+        campaigns_created_this_month: businessProfile.campaigns_created_this_month,
+        campaigns_created_month: businessProfile.campaigns_created_month,
+      },
+      currentMonth,
+    );
 
-    if (usedThisMonth >= 3) {
+    if (!limit.allowed) {
       return NextResponse.json({ error: "Free plan limit reached: 3 campaigns per month. Upgrade for unlimited." }, { status: 422 });
     }
 
     await supabase
       .from("business_profiles")
-      .update({
-        campaigns_created_this_month: usedThisMonth + 1,
-        campaigns_created_month: currentMonth,
-      })
+      .update(limit.next)
       .eq("user_id", user.id);
   }
 
