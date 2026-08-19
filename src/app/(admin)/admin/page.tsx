@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, AlertTriangle, ShieldAlert, FileText, Activity, Gavel } from "lucide-react";
+import { DollarSign, Users, AlertTriangle, ShieldAlert, FileText, Activity, Gavel, BadgeCheck } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminDashboard() {
@@ -105,6 +105,19 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-background/60">Immutable admin action log viewer</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/manual-verifications">
+          <Card className="bg-surface/5 border-background/10 hover:bg-surface/10 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-background flex items-center gap-2">
+                <BadgeCheck className="h-5 w-5" /> Follower Verification
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-background/60">Review creator TikTok, Instagram, and YouTube screenshots</p>
             </CardContent>
           </Card>
         </Link>

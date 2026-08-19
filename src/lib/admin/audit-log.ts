@@ -7,6 +7,10 @@ export async function logAdminAction(params: {
     | "refund"
     | "ban_user"
     | "unban_user"
+    | "suspend_user"
+    | "unsuspend_user"
+    | "approve_follower_verification"
+    | "reject_follower_verification"
     | "resolve_dispute"
     | "manual_strike"
     | "override_rating";

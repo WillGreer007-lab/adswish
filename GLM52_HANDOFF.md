@@ -1139,3 +1139,11 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - Verification before deploy: typecheck clean · lint 0 errors (6 warnings) · 162/162 tests · build passes.
 - **Production sweep after commit 09c6171:** 40 checks passed and 0 failed across public, business, creator, and the admin MFA gate. The six protected admin pages are marked skipped in the report because the existing admin factor's secret was not stored in the workspace; the earlier production admin MFA run verified all six at HTTP 200. No campaign/payment data was created.
 - **Live status:** https://adswish-lake.vercel.app is healthy on all deploy-check routes. Vercel API build state/URL reporting is wired, but `VERCEL_TOKEN` is still missing from `.env.local`; the account owner must add the token locally to enable that optional API check.
+
+## Batch: admin controls and manual follower proof (Aug 19)
+
+- **Migration 031 applied to Supabase:** manual verification rows now have one current submission per creator/platform, claimed follower count, handle, review notes, timestamps, and a private `creator-verification` Storage bucket with owner-scoped policies.
+- **Creator workflow:** profile and onboarding submissions for TikTok, Instagram, and YouTube upload a screenshot through `/api/internal/manual-verifications`. Manual counts remain unverified and do not change the public social account or tier until approved.
+- **Admin workflow:** `/admin/manual-verifications` shows signed screenshot previews and approve/reject controls. Approval updates the verified social account, recalculates the highest verified creator tier, writes an audit log, and notifies the creator.
+- **Account administration:** `/admin/users` now supports suspend, reactivate, ban, and unban actions for creators and businesses. Actions are audit logged and notify the target. Middleware blocks suspended/banned dashboard, onboarding, and internal API access and routes users to `/account-suspended`; admins can still restore accounts.
+- **Verification before publish:** typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.

@@ -78,6 +78,38 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  const userRole =
+    user.data.user?.app_metadata?.role ?? user.data.user?.user_metadata?.role;
+  const isProtectedAppRequest =
+    request.nextUrl.pathname.startsWith("/dashboard") ||
+    request.nextUrl.pathname.startsWith("/onboarding") ||
+    request.nextUrl.pathname.startsWith("/api/internal");
+
+  // Suspended/banned profiles cannot use dashboard pages or internal APIs.
+  // Admins bypass this check so an administrator can restore an account.
+  if (!user.error && user.data.user && userRole !== "admin" && isProtectedAppRequest) {
+    const profileTable = userRole === "creator" ? "creator_profiles" : userRole === "business" ? "business_profiles" : null;
+    if (profileTable) {
+      const { data: profile } = await supabase
+        .from(profileTable)
+        .select("account_status")
+        .eq("user_id", user.data.user.id)
+        .maybeSingle();
+      if (profile?.account_status === "suspended" || profile?.account_status === "banned") {
+        if (request.nextUrl.pathname.startsWith("/api/")) {
+          return NextResponse.json(
+            { error: `Account is ${profile.account_status}`, code: "account_suspended" },
+            { status: 403 },
+          );
+        }
+        const url = request.nextUrl.clone();
+        url.pathname = "/account-suspended";
+        url.search = `?status=${profile.account_status}`;
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   if (
     !user.error &&
     user.data.user &&

@@ -106,57 +106,50 @@ function ConnectSocialPageInner() {
       return;
     }
 
-    setLoading(true);
-    const supabase = createSupabaseBrowserClient();
-
-    let screenshotUrl: string | null = null;
-    if (screenshot) {
-      const fileName = `${userId}/verification_${selectedPlatform}.png`;
-      const { error: uploadError } = await supabase.storage
-        .from("creator-assets")
-        .upload(fileName, screenshot, { upsert: true });
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage
-          .from("creator-assets")
-          .getPublicUrl(fileName);
-        screenshotUrl = publicUrl;
-      }
-    }
-
-    const { error } = await supabase
-      .from("creator_social_accounts")
-      .upsert({
-        creator_id: userId,
-        platform: selectedPlatform,
-        handle,
-        follower_count: followerCount,
-        verified_at: new Date().toISOString(),
-        disconnected_at: null,
-      }, { onConflict: "creator_id,platform" });
-
-    if (error) {
-      console.error(error);
-      setLoading(false);
+    const automaticallyVerified = connectedAccounts.some(
+      (account) => account.platform === selectedPlatform && account.verified_at,
+    );
+    if (!automaticallyVerified && !screenshot) {
+      alert("Upload a screenshot for manual verification before continuing.");
       return;
     }
 
-    if (screenshotUrl) {
-      await supabase.from("manual_follower_verifications").upsert({
-        creator_id: userId,
-        platform: selectedPlatform,
-        screenshot_url: screenshotUrl,
-        status: "pending",
-      }, { onConflict: "creator_id,platform" });
+    setLoading(true);
+    const supabase = createSupabaseBrowserClient();
+
+    if (screenshot) {
+      const form = new FormData();
+      form.append("platform", selectedPlatform);
+      form.append("handle", handle);
+      form.append("follower_count", String(followerCount));
+      form.append("file", screenshot);
+      const verificationResponse = await fetch("/api/internal/manual-verifications", {
+        method: "POST",
+        body: form,
+      });
+      const verificationData = await verificationResponse.json().catch(() => ({}));
+      if (!verificationResponse.ok) {
+        alert(verificationData.error || "Could not submit the screenshot for review.");
+        setLoading(false);
+        return;
+      }
+    }
+
+    const profileUpdate: {
+      onboarding_step: string;
+      tier?: "micro" | "mid" | "macro";
+      previous_tier?: "micro" | "mid" | "macro";
+      tier_changed_at?: string;
+    } = { onboarding_step: "plan_selection" };
+    if (automaticallyVerified && tier) {
+      profileUpdate.tier = tier;
+      profileUpdate.previous_tier = tier;
+      profileUpdate.tier_changed_at = new Date().toISOString();
     }
 
     await supabase
       .from("creator_profiles")
-      .update({
-        tier,
-        previous_tier: tier,
-        tier_changed_at: new Date().toISOString(),
-        onboarding_step: "plan_selection",
-      })
+      .update(profileUpdate)
       .eq("user_id", userId);
 
     router.push("/onboarding/creator/plan_selection");
@@ -312,9 +305,9 @@ function ConnectSocialPageInner() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="screenshot">Verification screenshot (optional)</Label>
+            <Label htmlFor="screenshot">Verification screenshot</Label>
             <p className="text-xs text-muted-foreground">
-              Upload a screenshot of your profile showing follower count for manual verification.
+              Required when the platform is not automatically connected. An admin must approve the screenshot before this follower count is verified.
             </p>
             <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 hover:border-primary">
               <Upload className="h-4 w-4 text-muted-foreground" />

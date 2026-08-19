@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { SocialConnections } from "@/components/dashboard/social-connections";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
+import { ManualFollowerVerification } from "@/components/dashboard/manual-follower-verification";
 import { tierColor, tierLabel } from "@/lib/tier";
 
 export default async function CreatorProfilePage({
@@ -110,6 +111,8 @@ export default async function CreatorProfilePage({
           <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>
           <SocialConnections initial={(socials ?? []) as never} />
         </div>
+
+        <ManualFollowerVerification />
       </div>
     </DashboardShell>
   );
