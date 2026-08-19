@@ -72,6 +72,10 @@ function SignupComponent() {
       setError("Please select whether you are joining as a creator or a business.");
       return;
     }
+    if (!agreedToMSA || !agreedToPrivacy) {
+      setError("You must agree to the Terms of Service and Privacy Policy to continue.");
+      return;
+    }
     setGoogleLoading(true);
     setError(null);
     const supabase = createSupabaseBrowserClient();

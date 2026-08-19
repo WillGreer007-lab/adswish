@@ -25,9 +25,9 @@ function getTier(followerCount: number): "micro" | "mid" | "macro" | null {
 }
 
 const TIER_LABELS: Record<string, { label: string; color: string }> = {
-  micro: { label: "Micro (1K–9.9K)", color: "text-muted-foreground" },
-  mid: { label: "Mid (10K–99.9K)", color: "text-primary" },
-  macro: { label: "Macro (100K+)", color: "text-warning" },
+  micro: { label: "Small Creator (1K–9.9K)", color: "text-emerald-600" },
+  mid: { label: "Moderate Creator (10K–99.9K)", color: "text-blue-600" },
+  macro: { label: "Big Creator (100K+)", color: "text-violet-600" },
 };
 
 function ConnectSocialPageInner() {

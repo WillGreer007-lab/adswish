@@ -35,6 +35,7 @@ function makeFakeSupabase(selects: Record<string, Row | Row[] | null> = {}) {
         select: (cols?: string) => { eq: (k: string, v: unknown) => { single: () => Promise<{ data: unknown; error: null }> } };
         update: (payload: Row) => typeof thenable & { eq: (k: string, v: unknown) => typeof thenable };
         insert: (payload: Row | Row[]) => PromiseLike<{ error: null }>;
+        upsert: (payload: Row | Row[], opts?: { onConflict?: string }) => PromiseLike<{ error: null }>;
       } = {
         select: () => ({
           eq: () => ({
@@ -50,6 +51,11 @@ function makeFakeSupabase(selects: Record<string, Row | Row[] | null> = {}) {
           return t;
         },
         insert: (payload: Row | Row[]) => {
+          const rows = Array.isArray(payload) ? payload : [payload];
+          inserted[table] = [...(inserted[table] ?? []), ...rows];
+          return Promise.resolve({ error: null });
+        },
+        upsert: (payload: Row | Row[]) => {
           const rows = Array.isArray(payload) ? payload : [payload];
           inserted[table] = [...(inserted[table] ?? []), ...rows];
           return Promise.resolve({ error: null });

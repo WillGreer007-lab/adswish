@@ -5,12 +5,9 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Users, Youtube, Instagram, Music2, ShieldCheck, Search } from "lucide-react";
+import { TIER_META, type Tier } from "@/lib/tier";
 
-const tierConfig: Record<string, { label: string; color: string }> = {
-  micro: { label: "Micro", color: "bg-muted text-muted-foreground" },
-  mid: { label: "Mid", color: "bg-primary/10 text-primary" },
-  macro: { label: "Macro", color: "bg-warning/10 text-warning" },
-};
+const tierConfig = TIER_META;
 
 const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   youtube: Youtube,
@@ -95,9 +92,9 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
           aria-label="Filter by tier"
         >
           <option value="all">All tiers</option>
-          <option value="micro">Micro (1K–9.9K)</option>
-          <option value="mid">Mid (10K–99.9K)</option>
-          <option value="macro">Macro (100K+)</option>
+          <option value="micro">Small Creator (1K–9.9K)</option>
+          <option value="mid">Moderate Creator (10K–99.9K)</option>
+          <option value="macro">Big Creator (100K+)</option>
         </select>
         <select
           value={sort}
@@ -145,7 +142,7 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
       ) : (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((creator) => {
-            const tierInfo = tierConfig[creator.tier] || tierConfig.micro;
+            const tierInfo = tierConfig[creator.tier as Tier] ?? tierConfig.micro;
             const socials = creator.creator_social_accounts ?? [];
             const total = totalFollowers(socials);
             const verified = socials.filter((s) => s.verified_at);
@@ -176,7 +173,7 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tierInfo.color}`}>
-                        {tierInfo.label} tier
+                        {tierInfo.label}
                       </span>
                       {creator.average_rating > 0 && (
                         <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">

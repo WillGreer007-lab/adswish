@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, CheckCircle2, Building2 } from "lucide-react";
+import { ConnectButton } from "@/components/dashboard/connect-button";
 
 const planConfig: Record<string, { label: string; color: string }> = {
   business_free: { label: "Free", color: "bg-muted text-muted-foreground" },
@@ -67,6 +68,9 @@ export default async function BusinessProfilePage({ params }: { params: Promise<
                 {profile.average_rating.toFixed(1)}
               </span>
             )}
+          </div>
+          <div className="mt-4">
+            <ConnectButton targetUserId={id} />
           </div>
         </div>
       </div>

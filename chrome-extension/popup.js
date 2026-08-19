@@ -1,9 +1,28 @@
 const $ = (id) => document.getElementById(id);
 
+function setStatus(ok, text) {
+  $("statusDot").className = "dot " + (ok ? "green" : "red");
+  $("statusText").textContent = text;
+}
+
 function render() {
   chrome.storage.sync.get(["apiBase", "businessId"], (stored) => {
     $("apiBase").textContent = stored.apiBase || "(not set)";
     $("businessId").textContent = stored.businessId || "(not set)";
+
+    if (!stored.apiBase || !stored.businessId) {
+      setStatus(false, "Not working — open Settings");
+      return;
+    }
+
+    // Live check: ping the API through the background worker.
+    chrome.runtime.sendMessage({ type: "heartbeat", payload: {} }, (resp) => {
+      if (resp && resp.ok) {
+        setStatus(true, "Working");
+      } else {
+        setStatus(false, "Not working — check Settings");
+      }
+    });
   });
 }
 

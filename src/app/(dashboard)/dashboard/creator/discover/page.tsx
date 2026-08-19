@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
-import { Loader2, Search, Megaphone, Bookmark, Filter, Save, Trash2 } from "lucide-react";
+import { Loader2, Search, Megaphone, Bookmark, Filter, Save, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Campaign {
@@ -38,6 +39,7 @@ export default function DiscoverPage() {
   const [applying, setApplying] = useState<string | null>(null);
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [planLimitError, setPlanLimitError] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [minCommission, setMinCommission] = useState("");
@@ -118,11 +120,20 @@ export default function DiscoverPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      setError(data.error);
+      const message: string = data.error || "Could not apply";
+      if (/limit|upgrade/i.test(message)) {
+        setPlanLimitError(message);
+        setError(null);
+      } else {
+        setError(message);
+        setPlanLimitError(null);
+      }
       setApplying(null);
       return;
     }
 
+    setError(null);
+    setPlanLimitError(null);
     setCampaigns((prev) => prev.filter((c) => c.id !== campaignId));
     setApplying(null);
   }
@@ -326,6 +337,21 @@ export default function DiscoverPage() {
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
             <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {planLimitError && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">{planLimitError}</p>
+            </div>
+            <Link
+              href="/dashboard/creator/plan"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark"
+            >
+              Upgrade plan
+            </Link>
           </div>
         )}
 

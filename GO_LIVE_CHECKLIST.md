@@ -148,35 +148,32 @@ review; skip if you don't need social proof verification yet.
 
 ---
 
-## Stripe Connect questionnaire (unlocks creator payouts — v1)
+## Stripe Connect — payouts & cash-outs (per-user onboarding only)
 
-Live probe confirmed: your account's `transfers` capability is **active** and
-v1 Express account creation is only blocked by the uncompleted Connect
-platform questionnaire. Complete it and payouts work with **zero code changes**.
+Read-only check confirmed your **platform account is fully onboarded**
+(`transfers: active`, `details_submitted: true`, `currently_due: []`). No more
+platform questionnaire. The only remaining step is **each creator/business
+completing their own hosted Connect onboarding in-app**.
 
-1. Open `https://dashboard.stripe.com/connect/accounts/overview` (logged in as
-   the account that owns the `sk_live_` key).
-2. Click **Start onboarding / Complete platform profile** and answer the
-   questionnaire honestly:
-   - **Business details** — company name, country (GB), website
-     (`https://adswish-lake.vercel.app`), business model (platform / two-sided
-     marketplace connecting brands with creators).
-   - **Processing volume** — estimate monthly transaction volume (e.g. £5,000
-     to start). Keep it conservative — it only gates risk underwriting.
-   - **Products/services** — describe the service: "Adswish connects businesses
-     with creators for affiliate campaigns. Businesses pay for campaigns;
-     creators earn 90% of attributable sales via instant payouts."
-   - **Bank account for platform fees** — verify the payout account.
-   - Review + submit.
-3. Stripe usually approves instantly or within a few business days. You'll get
-   an email; the dashboard shows "Connect enabled".
-4. Tell me when it's approved and I'll re-run the v1 Express probe
-   (create account → account link) to confirm real payouts can clear.
+### Creator payouts (90% of attributable sales)
+1. Sign in as a creator → **Settings → Payouts** (or finish onboarding Step 4).
+2. Click **Connect Stripe** → a Stripe-hosted form opens in a new tab.
+3. Fill it honestly: legal name, email, country (GB), bank account for payouts.
+   (Test values if you want to dry-run: SSN `000-00-0000`, bank routing
+   `110000000`, account `000123456789`.)
+4. Return to Adswish → click **"I finished onboarding — check now"**.
+5. The `account.updated` webhook flips `stripe_connect_ready = true`; the next
+   release-holds cron run pays out the held 90% via a real transfer.
+
+### Business cash-outs (the 90/10 balance cash-out feature)
+1. Sign in as a business → **Payments** page → **"Connect / manage payout account"**.
+2. Same Stripe-hosted form as above — completes the business's own Connect account.
+3. Return → click the refresh/check button; once `stripe_connect_ready` is set,
+   cash-out requests transfer to the business's bank (minus the 10% platform fee,
+   £10 minimum enforced in-app).
 
 Notes:
-- Do **not** misstate volume/business type — Connect approval is a KYC gate.
-- The questionnaire is a one-time platform-level step; individual creators
-  still complete their own hosted onboarding (test values: SSN `000-00-0000`,
-  bank routing `110000000`, account `000123456789`).
-- If Stripe requires it, you may also need to accept Stripe's "Connect
-  Accounts" terms in the same settings page.
+- Each user has their **own** Connect account; this is per-user, not one-off.
+- Creator vs business use the same hosted form (v1 account links).
+- A cash-out that fails (e.g. onboarding incomplete) **refunds the balance** and
+  surfaces the error in the Payments widget — no money is lost.

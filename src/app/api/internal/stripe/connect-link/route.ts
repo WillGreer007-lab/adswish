@@ -23,14 +23,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (user.user_metadata?.role !== "creator") {
-    return NextResponse.json({ error: "Only creators need Connect" }, { status: 403 });
+  const role = user.user_metadata?.role;
+  if (role !== "creator" && role !== "business") {
+    return NextResponse.json({ error: "Invalid role for Connect" }, { status: 403 });
   }
 
-  // Reuse the creator's existing account if one was already created.
+  const table = role === "business" ? "business_profiles" : "creator_profiles";
+  const nameCol = role === "business" ? "company_name" : "display_name";
+
+  // Reuse the account if one was already created.
   const { data: profile } = await supabase
-    .from("creator_profiles")
-    .select("stripe_account_id, display_name")
+    .from(table)
+    .select(`stripe_account_id, ${nameCol}`)
     .eq("user_id", user.id)
     .single();
 
@@ -40,25 +44,23 @@ export async function POST(request: NextRequest) {
     accountId = await createCreatorConnectAccount({
       userId: user.id,
       email: user.email || "",
-      name: profile?.display_name || user.user_metadata?.display_name,
+      name: (profile as any)?.[nameCol] || user.user_metadata?.display_name,
     });
 
-    // Persist immediately so onboarding can resume later.
     await supabase
-      .from("creator_profiles")
+      .from(table)
       .update({ stripe_account_id: accountId })
       .eq("user_id", user.id);
   }
 
   const stripe = getStripeClient();
   const origin = request.headers.get("origin") || "http://localhost:3000";
+  const returnPath = role === "business" ? "/dashboard/business/payments" : "/onboarding/creator/stripe_setup";
 
-  // v1 account_links accepts both v1 and v2 account ids (verified live), so
-  // hosted onboarding stays on the typed SDK for both account versions.
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${origin}/onboarding/creator/stripe_setup`,
-    return_url: `${origin}/auth/callback?next=/onboarding/creator/stripe_setup`,
+    refresh_url: `${origin}${returnPath}`,
+    return_url: `${origin}/auth/callback?next=${encodeURIComponent(returnPath)}`,
     type: "account_onboarding",
   });
 

@@ -7,8 +7,13 @@
     <style>
       :root { color-scheme: light dark; }
       body { font-family: system-ui, sans-serif; width: 300px; margin: 0; padding: 0.9rem; }
-      h1 { font-size: 1rem; margin: 0 0 0.25rem; }
+      h1 { font-size: 1rem; margin: 0 0 0.25rem; display: flex; align-items: center; gap: 0.4rem; }
       p { font-size: 0.8rem; opacity: 0.75; margin: 0 0 0.75rem; }
+      .status { display: flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.6rem; border-radius: 0.5rem; background: rgba(127,127,127,0.12); margin-bottom: 0.75rem; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+      .dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+      .dot.red { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
+      .status span:last-child { font-size: 0.8rem; font-weight: 600; }
       .row { display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; font-size: 0.8rem; }
       .row b { word-break: break-all; }
       button { width: 100%; margin-top: 0.35rem; padding: 0.5rem; font-size: 0.85rem; cursor: pointer; }
@@ -18,7 +23,13 @@
     </style>
   </head>
   <body>
-    <h1>Adswish Tracker</h1>
+    <h1><span>Adswish Tracker</span></h1>
+
+    <div class="status">
+      <span id="statusDot" class="dot red"></span>
+      <span id="statusText">Checking…</span>
+    </div>
+
     <p>Tracks conversions &amp; pixel heartbeats without site code.</p>
 
     <div class="row"><span>API base</span><b id="apiBase">—</b></div>

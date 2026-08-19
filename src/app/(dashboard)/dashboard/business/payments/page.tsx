@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
 import { Wallet, CreditCard, PiggyBank, ArrowLeftRight } from "lucide-react";
+import { BalanceWidget } from "@/components/dashboard/balance-widget";
 
 type LedgerRow = {
   id: string;
@@ -80,6 +81,8 @@ export default async function BusinessPaymentsPage() {
             <p className="mt-2 font-mono text-2xl font-bold text-primary">${fees.toFixed(2)}</p>
           </div>
         </div>
+
+        <BalanceWidget />
 
         <div className="rounded-lg border border-border bg-surface p-5">
           <div className="flex items-center gap-2">

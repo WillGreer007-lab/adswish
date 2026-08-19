@@ -4,6 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Users, Video, Youtube, Instagram, Music2, ShieldCheck } from "lucide-react";
+import { TIER_META, type Tier } from "@/lib/tier";
+import { ConnectButton } from "@/components/dashboard/connect-button";
 
 export async function generateMetadata({
   params,
@@ -48,11 +50,7 @@ export async function generateMetadata({
   };
 }
 
-const tierConfig: Record<string, { label: string; color: string }> = {
-  micro: { label: "Micro", color: "bg-muted text-muted-foreground" },
-  mid: { label: "Mid", color: "bg-primary/10 text-primary" },
-  macro: { label: "Macro", color: "bg-warning/10 text-warning" },
-};
+const tierConfig = TIER_META;
 
 const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   youtube: Youtube,
@@ -106,7 +104,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
     .limit(10);
 
   const planSlug = subscription?.plan_slug || "creator_free";
-  const tier = tierConfig[profile.tier] || tierConfig.micro;
+  const tier = tierConfig[profile.tier as Tier] ?? tierConfig.micro;
   const plan = planConfig[planSlug] || planConfig.creator_free;
   const fullName = profile.display_name;
 
@@ -126,7 +124,7 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
           <p className="mt-1 text-sm text-muted-foreground">{profile.bio}</p>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <span className={`rounded-full px-3 py-1 text-xs font-medium ${tier.color}`}>
-              {tier.label} Tier
+              {tier.label}
             </span>
             <span className={`rounded-full px-3 py-1 text-xs font-medium ${plan.color}`}>
               {plan.label} Plan
@@ -137,6 +135,9 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
                 {profile.average_rating.toFixed(1)}
               </span>
             )}
+          </div>
+          <div className="mt-4">
+            <ConnectButton targetUserId={id} />
           </div>
         </div>
       </div>

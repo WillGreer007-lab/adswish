@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { TrackingMethodToggle, type TrackingMethod } from "@/components/dashboard/tracking-method-toggle";
+import { TrackingStatus } from "@/components/dashboard/tracking-status";
+import { ChromeExtensionNotice } from "@/components/dashboard/chrome-extension-notice";
 import { Code2, Puzzle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,27 @@ export default async function BusinessTrackingPage() {
           </p>
         </div>
 
+        <TrackingStatus />
+
+        {/* Third-party uptime layer (optional) */}
+        <div className="rounded-lg border border-dashed border-border bg-surface p-5">
+          <h2 className="font-heading text-sm font-semibold">Add an independent uptime monitor (optional)</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The third check uses <strong className="text-foreground">UptimeRobot</strong> to watch your domain
+            from outside Adswish. Once configured, all three checks must be green before you can launch
+            affiliate or hybrid campaigns.
+          </p>
+          <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+            <li>Create a free account at <strong>uptimerobot.com</strong>.</li>
+            <li>Click <strong>+ New monitor</strong> → type <strong>HTTP(s)</strong> → URL ={" "}
+              <span className="font-mono text-foreground">{profile.verified_domain || "your verified domain"}</span> → create it.</li>
+            <li>Open <strong>My Settings → API Settings</strong> → create a <strong>Read-only API key</strong> → copy it.</li>
+            <li>Add it to the platform as the <code className="rounded bg-muted px-1">UPTIME_ROBOT_API_KEY</code> environment variable
+              (an admin does this in Vercel → Environment Variables).</li>
+            <li>Return here and press <strong>Check again</strong> — the third tick turns green when UptimeRobot reports your domain as up.</li>
+          </ol>
+        </div>
+
         <div className="rounded-lg border border-border bg-surface p-5">
           <h2 className="mb-1 font-heading text-sm font-semibold">Your tracking method</h2>
           <TrackingMethodToggle current={method} />
@@ -90,7 +113,8 @@ export default async function BusinessTrackingPage() {
 
         {/* Option B: Chrome extension */}
         <section className={cn("rounded-lg border bg-surface p-5", method === "extension" ? "border-primary/50" : "border-border")}>
-          <div className="flex items-center gap-2">
+          <ChromeExtensionNotice />
+          <div className="mt-4 flex items-center gap-2">
             <Puzzle className="h-5 w-5 text-primary" />
             <h2 className="font-heading text-lg font-semibold">Option B — Chrome extension</h2>
             <span className="ml-auto rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">

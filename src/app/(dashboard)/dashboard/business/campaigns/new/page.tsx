@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Trash2, Save } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NICHES = [
@@ -39,6 +40,14 @@ export default function NewCampaignPage() {
   const [deliverableDeadlines, setDeliverableDeadlines] = useState<string[]>([""]);
   const [saveAsTemplate, setSaveAsTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
+  const [hashtags, setHashtags] = useState<{ tiktok: string; instagram: string; youtube: string }>({
+    tiktok: "",
+    instagram: "",
+    youtube: "",
+  });
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [manualReview, setManualReview] = useState(false);
+  const [planLimitError, setPlanLimitError] = useState<string | null>(null);
 
   function toggleNiche(niche: string) {
     setSelectedNiches((prev) =>
@@ -84,6 +93,9 @@ export default function NewCampaignPage() {
         deliverable_deadlines: deliverableDeadlines.filter((d) => d),
         save_as_template: saveAsTemplate,
         template_name: templateName || null,
+        hashtags,
+        media_url: mediaUrl || null,
+        manual_review: manualReview,
         status,
       }),
     });
@@ -91,7 +103,12 @@ export default function NewCampaignPage() {
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.error || "Failed to create campaign");
+      const message: string = data.error || "Failed to create campaign";
+      if (/limit|upgrade/i.test(message)) {
+        setPlanLimitError(message);
+      } else {
+        alert(message);
+      }
       setLoading(false);
       return;
     }
@@ -112,6 +129,21 @@ export default function NewCampaignPage() {
         <h1 className="font-heading text-2xl font-bold">Create a Campaign</h1>
         <p className="text-sm text-muted-foreground">Set your terms — fixed, affiliate, or hybrid.</p>
       </div>
+
+      {planLimitError && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <p className="text-sm text-muted-foreground">{planLimitError}</p>
+          </div>
+          <Link
+            href="/dashboard/business/plan"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark"
+          >
+            Upgrade plan
+          </Link>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -254,6 +286,46 @@ export default function NewCampaignPage() {
           {saveAsTemplate && (
             <Input placeholder="Template name (e.g. 3 posts + 1 story)" value={templateName} onChange={(e) => setTemplateName(e.target.value)} />
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Hashtags &amp; review</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {(["tiktok", "instagram", "youtube"] as const).map((p) => (
+              <div key={p} className="space-y-2">
+                <Label htmlFor={`hashtag-${p}`} className="capitalize">{p} hashtag</Label>
+                <Input
+                  id={`hashtag-${p}`}
+                  placeholder={p === "tiktok" ? "#AdswishBrand" : p === "instagram" ? "#AdswishBrand" : "#AdswishBrand"}
+                  value={hashtags[p]}
+                  onChange={(e) => setHashtags((prev) => ({ ...prev, [p]: e.target.value }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Creators must include this hashtag on {p === "tiktok" ? "TikTok" : p === "instagram" ? "Instagram" : "YouTube"} to verify their post.
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="mediaUrl">Preview media URL (image or video, optional)</Label>
+            <Input id="mediaUrl" placeholder="https://…/product-preview.jpg or .mp4" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
+            <p className="text-xs text-muted-foreground">
+              A link creators see when applying — you can also attach assets later.
+            </p>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input type="checkbox" checked={manualReview} onChange={(e) => setManualReview(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-border accent-primary" />
+            <span className="text-sm">
+              <span className="font-medium">Manual review required.</span>{" "}
+              <span className="text-muted-foreground">Deliverable submissions must be manually approved before the next slot unlocks (in addition to automatic checks).</span>
+            </span>
+          </label>
         </CardContent>
       </Card>
 

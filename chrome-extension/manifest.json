@@ -3,6 +3,11 @@
   "name": "Adswish Tracker",
   "version": "1.1.0",
   "description": "Tracks Adswish affiliate conversions and pixel heartbeats without installing site code. An alternative to the adswish.com/pixel.js script.",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
@@ -23,7 +28,12 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Adswish Tracker"
+    "default_title": "Adswish Tracker",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
   },
   "options_page": "options.html"
 }

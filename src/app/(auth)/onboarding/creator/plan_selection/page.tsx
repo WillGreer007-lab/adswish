@@ -87,6 +87,20 @@ export default function CreatorPlanSelection() {
       .update({ onboarding_step: "stripe_setup" })
       .eq("user_id", userId);
 
+    // Paid plans open the Stripe hosted checkout before continuing.
+    if (selected !== "creator_free") {
+      const res = await fetch("/api/internal/stripe/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_slug: selected }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json.url) {
+        window.location.href = json.url;
+        return;
+      }
+    }
+
     router.push("/onboarding/creator/stripe_setup");
   }
 

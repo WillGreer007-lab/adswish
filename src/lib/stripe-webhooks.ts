@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeClient } from "@/lib/stripe/client";
 import { escrowHoldExpiresAt } from "@/lib/payout-math";
 import { applyRefund, applyChargeback, markChargeFailed } from "@/lib/finance";
+import { creditBalance } from "@/lib/balance";
 import pino from "pino";
 
 const logger = pino({ name: "stripe-webhooks" });
@@ -103,7 +104,9 @@ export async function syncSubscription(
   if (existing?.id) {
     await supabase.from(table).update(payload).eq("id", existing.id);
   } else {
-    await supabase.from(table).insert(payload);
+    // Upsert on the owner column so a pre-existing onboarding row is updated
+    // in place (requires migration 025's unique owner index).
+    await supabase.from(table).upsert(payload, { onConflict: idColumn });
   }
 }
 
@@ -147,19 +150,45 @@ export async function handleStripeEvent(
   switch (event.type as Stripe.Event["type"] | "transfer.paid" | "transfer.failed") {
     case "account.updated": {
       const account = event.data.object as Stripe.Account;
+      const ready = account.charges_enabled === true && account.details_submitted === true;
+
       // v2 accounts have no metadata, so fall back to the stored account id.
       let userId = account.metadata?.user_id;
+      let table: "creator_profiles" | "business_profiles" | null = account.metadata?.user_id ? "creator_profiles" : null;
+
       if (!userId) {
-        const { data: profile } = await supabase
+        const { data: creator } = await supabase
           .from("creator_profiles")
           .select("user_id")
           .eq("stripe_account_id", account.id)
           .single();
-        userId = profile?.user_id;
+        if (creator?.user_id) {
+          userId = creator.user_id;
+          table = "creator_profiles";
+        } else {
+          const { data: business } = await supabase
+            .from("business_profiles")
+            .select("user_id")
+            .eq("stripe_account_id", account.id)
+            .single();
+          if (business?.user_id) {
+            userId = business.user_id;
+            table = "business_profiles";
+          }
+        }
       }
+
       if (userId) {
-        const ready = account.charges_enabled === true && account.details_submitted === true;
-        await supabase.from("creator_profiles").update({
+        // If metadata gave us the user id but not which table, detect by id.
+        if (!table) {
+          const { data: business } = await supabase
+            .from("business_profiles")
+            .select("user_id")
+            .eq("user_id", userId)
+            .single();
+          table = business?.user_id ? "business_profiles" : "creator_profiles";
+        }
+        await supabase.from(table).update({
           stripe_account_id: account.id,
           stripe_connect_ready: ready,
         }).eq("user_id", userId);
@@ -184,6 +213,22 @@ export async function handleStripeEvent(
         const stripe = getStripeClient();
         const subscription = await stripe.subscriptions.retrieve(session.subscription);
         await syncSubscription(subscription, supabase);
+        break;
+      }
+
+      // One-time payment: credit the business balance for top-ups.
+      if (session.mode === "payment" && session.metadata?.kind === "topup" && userId) {
+        const amountCents = session.amount_total ?? 0;
+        if (amountCents > 0) {
+          await creditBalance(
+            supabase,
+            userId,
+            amountCents,
+            "topup",
+            "Stripe balance top-up",
+            session.id,
+          );
+        }
       }
       break;
     }

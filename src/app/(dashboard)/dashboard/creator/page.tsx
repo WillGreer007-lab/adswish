@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState, EarningsWidget } from "@/components/dashboard/dashboard-shell";
 import { Megaphone, Search, TrendingUp, Sparkles } from "lucide-react";
+import { tierColor, tierLabel } from "@/lib/tier";
 import Link from "next/link";
 
 export default async function CreatorDashboard() {
@@ -33,16 +34,6 @@ export default async function CreatorDashboard() {
       subscription.plan_slug.replace("creator_", "").slice(1)
     : "Free";
 
-  const tierColors: Record<string, string> = {
-    micro: "bg-muted text-muted-foreground",
-    mid: "bg-primary/10 text-primary",
-    macro: "bg-warning/10 text-warning",
-  };
-  const tierLabels: Record<string, string> = {
-    micro: "Micro",
-    mid: "Mid",
-    macro: "Macro",
-  };
 
   return (
     <DashboardShell role="creator" userId={user.id} userName={profile.display_name} planBadge={planBadge}>
@@ -52,8 +43,8 @@ export default async function CreatorDashboard() {
             <h1 className="font-heading text-2xl font-bold">Overview</h1>
             <p className="text-sm text-muted-foreground">Welcome back, {profile.display_name}.</p>
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${tierColors[profile.tier]}`}>
-            {tierLabels[profile.tier]} Tier
+          <span className={`rounded-full px-3 py-1 text-xs font-medium ${tierColor(profile.tier)}`}>
+            {tierLabel(profile.tier)}
           </span>
         </div>
 

@@ -3,24 +3,7 @@ import { EmptyState } from "@/components/dashboard/dashboard-shell";
 import { CampaignChat } from "@/components/dashboard/campaign-chat";
 import { MessageSquare } from "lucide-react";
 
-type CampaignWithMessages = {
-  id: string;
-  name: string;
-  messages: {
-    id: string;
-    body: string;
-    sender_id: string;
-    created_at: string;
-    campaign_id: string;
-  }[];
-};
-
-function campaignName(
-  c: { name: string } | { name: string }[] | null,
-): string {
-  if (!c) return "Campaign";
-  return Array.isArray(c) ? (c[0]?.name ?? "Campaign") : c.name;
-}
+type CampaignRow = { id: string; title: string };
 
 /**
  * Messages page body. Loads every campaign the user participates in with its
@@ -34,32 +17,31 @@ export async function CampaignMessages({ userId }: { userId: string }) {
   const [{ data: owned }, { data: accepted }] = await Promise.all([
     supabase
       .from("campaigns")
-      .select("id, name, status")
+      .select("id, title, status")
       .eq("business_id", userId)
-      .in("status", ["active", "paused_budget", "new_applications", "all_activity", "paused"]),
+      .in("status", ["active", "paused", "paused_budget", "completed"]),
     supabase
       .from("applications")
-      .select("campaign_id, campaigns(id, name, status)")
+      .select("campaign_id, campaigns(id, title, status)")
       .eq("creator_id", userId)
       .eq("status", "accepted"),
   ]);
 
-  const ownedRows = (owned ?? []) as { id: string; name: string }[];
+  const ownedRows = (owned ?? []) as CampaignRow[];
   const acceptedRows = ((accepted ?? []) as {
     campaign_id: string;
-    campaigns: { id: string; name: string } | { id: string; name: string }[] | null;
+    campaigns: CampaignRow | CampaignRow[] | null;
   }[]).map((a) => {
-    const c = a.campaigns;
-    const row = Array.isArray(c) ? c[0] : c;
-    return row ? { id: row.id, name: row.name } : null;
-  }).filter((x): x is { id: string; name: string } => !!x);
+    const row = Array.isArray(a.campaigns) ? a.campaigns[0] : a.campaigns;
+    return row ? { id: row.id, title: row.title } : null;
+  }).filter((x): x is CampaignRow => !!x);
 
   const byId = new Map<string, string>();
   for (const c of [...ownedRows, ...acceptedRows]) {
-    if (!byId.has(c.id)) byId.set(c.id, c.name);
+    if (!byId.has(c.id)) byId.set(c.id, c.title);
   }
 
-  const campaigns = Array.from(byId, ([id, name]) => ({ id, name }));
+  const campaigns = Array.from(byId, ([id, title]) => ({ id, title }));
 
   if (campaigns.length === 0) {
     return (
@@ -102,7 +84,7 @@ export async function CampaignMessages({ userId }: { userId: string }) {
             href={`#chat-${c.id}`}
             className="block truncate rounded-md border border-border bg-surface px-3 py-2 text-sm hover:border-primary/50"
           >
-            {c.name}
+            {c.title}
           </a>
         ))}
       </div>
@@ -115,7 +97,7 @@ export async function CampaignMessages({ userId }: { userId: string }) {
             id={`chat-${c.id}`}
             className="rounded-lg border border-border bg-surface p-5"
           >
-            <h2 className="mb-3 font-heading text-base font-semibold">{c.name}</h2>
+            <h2 className="mb-3 font-heading text-base font-semibold">{c.title}</h2>
             <CampaignChat
               campaignId={c.id}
               userId={userId}

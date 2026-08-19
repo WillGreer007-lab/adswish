@@ -39,19 +39,36 @@ export async function GET(request: NextRequest) {
         const serviceClient = createSupabaseServiceRoleClient();
 
         if (role === "creator") {
-          await serviceClient.from("creator_profiles").upsert({
-            user_id: data.user.id,
-            display_name: data.user.user_metadata?.display_name || "",
-            account_status: "active",
-            onboarding_step: "profile_setup",
-          }, { onConflict: "user_id" });
+          // Create the profile only on FIRST sign-in. Upserting here used to
+          // reset onboarding_step to "profile_setup" on every Google sign-in,
+          // which forced returning creators back through onboarding.
+          const { data: existing } = await serviceClient
+            .from("creator_profiles")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+          if (!existing) {
+            await serviceClient.from("creator_profiles").insert({
+              user_id: data.user.id,
+              display_name: data.user.user_metadata?.display_name || "",
+              account_status: "active",
+              onboarding_step: "profile_setup",
+            });
+          }
         } else if (role === "business") {
-          await serviceClient.from("business_profiles").upsert({
-            user_id: data.user.id,
-            company_name: data.user.user_metadata?.company_name || "",
-            account_status: "active",
-            onboarding_step: "company_info",
-          }, { onConflict: "user_id" });
+          const { data: existing } = await serviceClient
+            .from("business_profiles")
+            .select("user_id")
+            .eq("user_id", data.user.id)
+            .maybeSingle();
+          if (!existing) {
+            await serviceClient.from("business_profiles").insert({
+              user_id: data.user.id,
+              company_name: data.user.user_metadata?.company_name || "",
+              account_status: "active",
+              onboarding_step: "company_info",
+            });
+          }
         }
 
         await serviceClient.from("notification_preferences").upsert({

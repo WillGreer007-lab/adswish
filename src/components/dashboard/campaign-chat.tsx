@@ -34,9 +34,13 @@ export function CampaignChat({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [realtimeOn, setRealtimeOn] = useState(true);
+  const [presenceCount, setPresenceCount] = useState(0);
+  const [typing, setTyping] = useState(false);
   const realtimeOnRef = useRef(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socialRef = useRef<ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const updateRealtime = (on: boolean) => {
     realtimeOnRef.current = on;
@@ -128,9 +132,65 @@ export function CampaignChat({
     };
   }, [campaignId, fetchLatest, onSend]);
 
+  // Presence + typing indicators via a second realtime channel.
+  useEffect(() => {
+    let channel: ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]> | null = null;
+    try {
+      const supabase = createSupabaseBrowserClient();
+      channel = supabase.channel(`chat-social-${campaignId}`, {
+        config: { presence: { key: userId } },
+      });
+      socialRef.current = channel;
+
+      channel
+        .on("presence", { event: "sync" }, () => {
+          const state = channel?.presenceState() as Record<string, unknown>;
+          const others = Object.keys(state ?? {}).filter((k) => k !== userId).length;
+          setPresenceCount(others);
+        })
+        .on("broadcast", { event: "typing" }, ({ payload }) => {
+          const p = payload as { user_id?: string } | undefined;
+          if (p?.user_id && p.user_id !== userId) {
+            setTyping(true);
+            if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+            typingTimerRef.current = setTimeout(() => setTyping(false), 2000);
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            await channel?.track({ user_id: userId });
+          }
+        });
+    } catch {
+      channel = null;
+    }
+
+    return () => {
+      if (channel && socialRef.current) {
+        const s = createSupabaseBrowserClient();
+        s.removeChannel(channel);
+      }
+      socialRef.current = null;
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, [campaignId, userId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length]);
+
+  function onDraftChange(value: string) {
+    setDraft(value);
+    try {
+      socialRef.current?.send({
+        type: "broadcast",
+        event: "typing",
+        payload: { user_id: userId },
+      });
+    } catch {
+      /* presence/broadcast is best-effort */
+    }
+  }
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -167,11 +227,15 @@ export function CampaignChat({
 
   return (
     <div className="flex flex-col">
-      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span
           className={`inline-block h-2 w-2 rounded-full ${realtimeOn ? "bg-success" : "bg-muted"}`}
         />
         {realtimeOn ? "Live — messages appear instantly" : "Offline mode — checking for new messages"}
+        {presenceCount > 0 && (
+          <span className="rounded-full bg-muted px-2 py-0.5">{presenceCount} online</span>
+        )}
+        {typing && <span className="italic text-primary">typing…</span>}
       </div>
 
       <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
@@ -205,7 +269,7 @@ export function CampaignChat({
       <form onSubmit={handleSend} className="mt-3 flex items-center gap-2">
         <input
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => onDraftChange(e.target.value)}
           placeholder="Write a message…"
           maxLength={4000}
           className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"

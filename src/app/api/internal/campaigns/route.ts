@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStripeCurrency } from "@/lib/stripe/client";
-import { evaluateFreePlanCampaignLimit } from "@/lib/campaign-limits";
+import {
+  evaluateFreePlanCampaignLimit,
+  BUSINESS_PLAN_CAMPAIGN_LIMITS,
+  FREE_PLAN_MONTHLY_LIMIT,
+} from "@/lib/campaign-limits";
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -29,6 +33,9 @@ export async function POST(request: NextRequest) {
     template_name,
     status,
     clone_from,
+    hashtags,
+    media_url,
+    manual_review,
   } = body;
 
   // Duplicate an existing campaign: start from its settings, overridden by any
@@ -45,6 +52,9 @@ export async function POST(request: NextRequest) {
     niche: niche ?? [],
     deliverable_count,
     deadline_days: deadline_days ?? 14,
+    hashtags: hashtags ?? {},
+    media_url: media_url ?? null,
+    manual_review: manual_review ?? false,
   };
 
   if (clone_from) {
@@ -71,6 +81,9 @@ export async function POST(request: NextRequest) {
       niche: niche ?? source.niche,
       deliverable_count: deliverable_count ?? source.deliverable_count,
       deadline_days: deadline_days ?? source.deadline_days ?? 14,
+      hashtags: hashtags ?? source.hashtags ?? {},
+      media_url: media_url ?? source.media_url ?? null,
+      manual_review: manual_review ?? source.manual_review ?? false,
     };
   }
 
@@ -96,7 +109,7 @@ export async function POST(request: NextRequest) {
 
   const { data: businessProfile } = await supabase
     .from("business_profiles")
-    .select("user_id, campaigns_created_this_month, campaigns_created_month, account_status")
+    .select("user_id, campaigns_created_this_month, campaigns_created_month, account_status, stripe_customer_id, verified_domain, balance_cents")
     .eq("user_id", user.id)
     .single();
 
@@ -108,6 +121,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Account is not active" }, { status: 403 });
   }
 
+  // Tracking gating: a business has active tracking if its domain is verified
+  // or it has at least one non-revoked tracking link.
+  const { data: activeLinks } = await supabase
+    .from("tracking_links")
+    .select("id, campaigns!inner(business_id)")
+    .eq("campaigns.business_id", user.id)
+    .is("revoked_at", null)
+    .limit(1);
+
+  const hasStripe = Boolean(businessProfile.stripe_customer_id);
+  const hasTracking = Boolean(businessProfile.verified_domain) || (activeLinks?.length ?? 0) > 0;
+
+  if ((base.type === "affiliate" || base.type === "hybrid") && (!hasStripe || !hasTracking)) {
+    const missing = [];
+    if (!hasStripe) missing.push("a connected Stripe payment method");
+    if (!hasTracking) missing.push("an active tracking link or verified domain");
+    return NextResponse.json(
+      { error: `Affiliate/Hybrid campaigns require ${missing.join(" and ")}. Connect Stripe and set up tracking first.` },
+      { status: 422 },
+    );
+  }
+
+  if (base.type === "fixed" && !hasTracking) {
+    // Without an active tracking link, fixed campaigns draw from the balance.
+    const feeCents = Math.round((Number(base.fixed_amount) || 0) * 100);
+    const balance = Number(businessProfile.balance_cents ?? 0);
+    if (balance < feeCents) {
+      return NextResponse.json(
+        { error: `No active tracking link — a fixed campaign needs enough wallet balance (need ${(feeCents / 100).toFixed(2)}, have ${(balance / 100).toFixed(2)}). Top up first.` },
+        { status: 422 },
+      );
+    }
+  }
+
   const { data: subscription } = await supabase
     .from("business_subscriptions")
     .select("plan_slug")
@@ -115,20 +162,26 @@ export async function POST(request: NextRequest) {
     .eq("status", "active")
     .single();
 
-  const isFree = !subscription || subscription.plan_slug === "business_free";
+  const planSlug = subscription?.plan_slug ?? "business_free";
+  const planLimit = BUSINESS_PLAN_CAMPAIGN_LIMITS[planSlug] ?? FREE_PLAN_MONTHLY_LIMIT;
   const currentMonth = new Date().toISOString().slice(0, 7);
 
-  if (isFree && status === "active") {
+  if (status === "active") {
     const limit = evaluateFreePlanCampaignLimit(
       {
         campaigns_created_this_month: businessProfile.campaigns_created_this_month,
         campaigns_created_month: businessProfile.campaigns_created_month,
       },
       currentMonth,
+      planLimit,
     );
 
     if (!limit.allowed) {
-      return NextResponse.json({ error: "Free plan limit reached: 3 campaigns per month. Upgrade for unlimited." }, { status: 422 });
+      const cap = Number.isFinite(planLimit) ? `${planLimit} campaigns per month` : "campaigns";
+      return NextResponse.json(
+        { error: `Your ${planSlug.replace("business_", "")} plan limit reached (${cap}). Upgrade for more.` },
+        { status: 422 },
+      );
     }
 
     await supabase
@@ -173,6 +226,9 @@ export async function POST(request: NextRequest) {
       deliverable_count: base.deliverable_count,
       deadline_days: resolvedDeadlineDays,
       deliverable_deadlines: deliverable_deadlines ?? [],
+      hashtags: base.hashtags,
+      media_url: base.media_url,
+      manual_review: base.manual_review,
       status: status || "draft",
     })
     .select()

@@ -389,6 +389,19 @@ function CampaignCard({ card }: { card: typeof campaignCards[0] }) {
 export default function LandingPage() {
   useScrollReveal();
   const perksRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyPixelSnippet() {
+    try {
+      await navigator.clipboard.writeText(
+        '<script src="https://adswish.com/pixel.js" async></script>'
+      );
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
 
   const scrollPerks = (dir: "left" | "right") => {
     if (!perksRef.current) return;
@@ -428,6 +441,8 @@ export default function LandingPage() {
               </div>
             </div>
             <Link href="/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Creators</Link>
+            <Link href="/businesses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Businesses</Link>
+            <Link href="/plans" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Plans</Link>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How it works</a>
             <a href="#perks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Perks</a>
             <a href="#guides" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Guides</a>
@@ -451,16 +466,15 @@ export default function LandingPage() {
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <AdswishLogo wordmark={false} className="h-4 w-4" />
             </span>
-            <span className="text-sm font-medium text-foreground/80">Adswish 1.0 is live</span>
+            <span className="text-sm font-medium text-foreground/80">Adswish 2.0 is live</span>
           </div>
 
           {/* Headline */}
           <h1 className="mt-6 font-heading text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
-            <span className="text-foreground">Launch</span>{" "}
-            <span className="text-primary">winning</span>
-            <br />
-            <span className="text-primary">creator</span>{" "}
-            <span className="text-foreground">campaigns</span>
+            <span className="text-foreground">A marketplace for</span>{" "}
+            <span className="text-primary">business</span>{" "}
+            <span className="text-foreground">and</span>{" "}
+            <span className="text-primary">creators</span>
           </h1>
 
           {/* Subheadline */}
@@ -643,10 +657,16 @@ export default function LandingPage() {
                 <strong className="font-medium text-foreground">Adswish Chrome extension</strong> and track
                 conversions with zero site code. Edge-redirected links survive ad blockers either way.
               </p>
-              <div className="mt-4 flex gap-3">
-                <Button size="sm" className="btn-slide">Copy snippet</Button>
-                <Button size="sm" variant="outline" className="card-lift">GTM template</Button>
-                <Button size="sm" variant="outline" className="card-lift">Chrome extension</Button>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button size="sm" className="btn-slide" onClick={copyPixelSnippet}>
+                  {copied ? "Copied!" : "Copy snippet"}
+                </Button>
+                <Button asChild size="sm" variant="outline" className="card-lift">
+                  <a href="/adswish-gtm-tag.html" target="_blank" rel="noreferrer">GTM template</a>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="card-lift">
+                  <a href="#extension">Chrome extension</a>
+                </Button>
               </div>
             </div>
             <div className="w-full max-w-sm">
@@ -759,7 +779,7 @@ export default function LandingPage() {
               </p>
               <ul className="mt-6 space-y-3">
                 {[
-                  { title: "Tier badges", desc: "Micro, Mid, and Macro — know each creator's reach before you apply" },
+                  { title: "Tier badges", desc: "Small, Moderate, and Big creators — know each creator's reach before you apply" },
                   { title: "Verified channels", desc: "Green checkmarks on platforms with live, refreshable follower counts" },
                   { title: "Niche filters", desc: "Narrow by category and sort by followers or rating in one click" },
                 ].map((f) => (
@@ -793,10 +813,10 @@ export default function LandingPage() {
                 </div>
                 <div className="grid gap-3 p-5 sm:grid-cols-2">
                   {[
-                    { name: "Sarah M.", niche: "Fitness • 4.9", tier: "Micro", verified: true },
-                    { name: "Jake T.", niche: "Tech • 4.8", tier: "Mid", verified: true },
-                    { name: "Mia R.", niche: "Beauty • 5.0", tier: "Macro", verified: true },
-                    { name: "Leo K.", niche: "Gaming • 4.7", tier: "Mid", verified: false },
+                    { name: "Sarah M.", niche: "Fitness • 4.9", tier: "Small", verified: true },
+                    { name: "Jake T.", niche: "Tech • 4.8", tier: "Moderate", verified: true },
+                    { name: "Mia R.", niche: "Beauty • 5.0", tier: "Big", verified: true },
+                    { name: "Leo K.", niche: "Gaming • 4.7", tier: "Moderate", verified: false },
                   ].map((c) => (
                     <div key={c.name} className="rounded-lg border border-border p-4">
                       <div className="flex items-center justify-between">

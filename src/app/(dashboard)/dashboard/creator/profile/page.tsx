@@ -4,12 +4,8 @@ import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-she
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { SocialConnections } from "@/components/dashboard/social-connections";
-
-const tierStyles: Record<string, string> = {
-  micro: "bg-muted text-muted-foreground",
-  mid: "bg-primary/10 text-primary",
-  macro: "bg-warning/10 text-warning",
-};
+import { AvatarUpload } from "@/components/dashboard/avatar-upload";
+import { tierColor, tierLabel } from "@/lib/tier";
 
 export default async function CreatorProfilePage({
   searchParams,
@@ -54,12 +50,16 @@ export default async function CreatorProfilePage({
         </div>
 
         {upgrade && (
-          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <p className="text-sm text-muted-foreground">
-              Plan upgrades are part of the next phase. For now, you&apos;re on the Free plan —
-              every feature you have now keeps working.
-            </p>
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-sm text-muted-foreground">
+                Compare plans and unlock more campaigns, faster payouts, and deeper analytics.
+              </p>
+            </div>
+            <a href="/plans" className="shrink-0 text-sm font-medium text-primary hover:underline">
+              View plans
+            </a>
           </div>
         )}
 
@@ -79,8 +79,8 @@ export default async function CreatorProfilePage({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-heading text-xl font-bold">{profile.display_name}</h2>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tierStyles[profile.tier]}`}>
-                {profile.tier} tier
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tierColor(profile.tier)}`}>
+                {tierLabel(profile.tier)}
               </span>
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{profile.bio || "No bio yet."}</p>
@@ -100,6 +100,11 @@ export default async function CreatorProfilePage({
             </div>
           </div>
         )}
+
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <h3 className="mb-3 font-heading text-sm font-semibold">Profile picture</h3>
+          <AvatarUpload role="creator" currentUrl={profile.profile_picture_url} name={profile.display_name} />
+        </div>
 
         <div className="rounded-lg border border-border bg-surface p-5">
           <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>

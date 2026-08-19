@@ -11,18 +11,23 @@ import {
   CreditCard,
   Radar,
   User,
+  BarChart3,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { LogoutButton } from "@/components/dashboard/logout-button";
+import { BackButton } from "@/components/dashboard/back-button";
 
 const CREATOR_NAV = [
   { label: "Overview", href: "/dashboard/creator", icon: LayoutDashboard },
   { label: "Discover", href: "/dashboard/creator/discover", icon: Search },
   { label: "My Campaigns", href: "/dashboard/creator/campaigns", icon: Megaphone },
   { label: "Earnings", href: "/dashboard/creator/earnings", icon: DollarSign },
+  { label: "Analytics", href: "/dashboard/creator/analytics", icon: BarChart3 },
   { label: "Payouts", href: "/dashboard/creator/payouts", icon: CreditCard },
   { label: "Messages", href: "/dashboard/creator/messages", icon: MessageSquare },
+  { label: "Plan", href: "/dashboard/creator/plan", icon: Crown },
   { label: "Profile", href: "/dashboard/creator/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
@@ -32,8 +37,10 @@ const BUSINESS_NAV = [
   { label: "Campaigns", href: "/dashboard/business/campaigns", icon: Megaphone },
   { label: "Applicants", href: "/dashboard/business/applicants", icon: Users },
   { label: "Payments", href: "/dashboard/business/payments", icon: DollarSign },
+  { label: "Analytics", href: "/dashboard/business/analytics", icon: BarChart3 },
   { label: "Tracking", href: "/dashboard/business/tracking", icon: Radar },
   { label: "Messages", href: "/dashboard/business/messages", icon: MessageSquare },
+  { label: "Plan", href: "/dashboard/business/plan", icon: Crown },
   { label: "Profile", href: "/dashboard/business/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
@@ -54,7 +61,7 @@ export function DashboardShell({
   const nav = role === "creator" ? CREATOR_NAV : BUSINESS_NAV;
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 flex-shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center gap-2 px-4 py-4">
@@ -100,6 +107,7 @@ export function DashboardShell({
             <span className="font-heading text-base font-bold">adswish</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <BackButton fallbackHref={role === "creator" ? "/dashboard/creator" : "/dashboard/business"} />
             <NotificationCenter userId={userId} />
             <LogoutButton variant="topbar" />
           </div>
@@ -107,7 +115,7 @@ export function DashboardShell({
 
         {/* Content */}
         <main className="flex-1 p-4 md:p-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
+          <div className="dashboard-content mx-auto max-w-6xl">{children}</div>
         </main>
       </div>
     </div>

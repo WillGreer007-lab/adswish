@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, IBM_Plex_Mono } from "next/font/google";
 import { TanStackQueryProvider } from "@/lib/providers/tanstack-query-provider";
 import { TelemetryProvider } from "@/components/telemetry/telemetry-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { GlobalBackButton } from "@/components/global-back-button";
+import { ExternalLinkGuard } from "@/components/external-link-guard";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -65,7 +68,13 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <TanStackQueryProvider>
-          <TelemetryProvider>{children}</TelemetryProvider>
+          <TelemetryProvider>
+            <ThemeProvider>
+              {children}
+              <GlobalBackButton />
+              <ExternalLinkGuard />
+            </ThemeProvider>
+          </TelemetryProvider>
         </TanStackQueryProvider>
       </body>
     </html>

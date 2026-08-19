@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { CampaignMessages } from "@/components/dashboard/campaign-messages";
+import { ConnectionsPanel } from "@/components/dashboard/connections-panel";
 
 export default async function CreatorMessagesPage() {
   const supabase = await createSupabaseServerClient();
@@ -26,6 +27,7 @@ export default async function CreatorMessagesPage() {
             Conversations with businesses on your active campaigns.
           </p>
         </div>
+        <ConnectionsPanel userId={user.id} role="creator" />
         <CampaignMessages userId={user.id} />
       </div>
     </DashboardShell>

@@ -88,6 +88,20 @@ export default function BusinessPlanSelection() {
       .update({ onboarding_step: "stripe_setup" })
       .eq("user_id", userId);
 
+    // Paid plans open the Stripe hosted checkout before continuing.
+    if (selected !== "business_free") {
+      const res = await fetch("/api/internal/stripe/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan_slug: selected }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (json.url) {
+        window.location.href = json.url;
+        return;
+      }
+    }
+
     router.push("/onboarding/business/stripe_setup");
   }
 

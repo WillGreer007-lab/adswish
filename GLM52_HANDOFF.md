@@ -12,6 +12,118 @@
 > **All agents: read `AGENTS.md` FIRST** — it has the mandatory safety rules (live Stripe
 > keys!, do/don't list, verification gate, migration process).
 
+## Latest — Marketing/tier/onboarding batch (Aug 19, NOT pushed)
+
+- **Landing page:** “Adswish 2.0 is live” badge; headline → “A marketplace for
+  business and creators”; added **Businesses** + **Plans** nav links; pixel-promo
+  buttons now actually work (Copy snippet → clipboard, GTM → `/adswish-gtm-tag.html`,
+  Chrome extension → `#extension`).
+- **New pages:** `/plans` (business + creator plans with real limits), `/businesses`
+  (business marketplace: features grid + searchable directory).
+- **Tier rename:** shared `TIER_META` in `src/lib/tier.ts` — Small Creator (emerald) /
+  Moderate Creator (blue) / Big Creator (violet), applied across landing, grid,
+  `[id]`, onboarding, dashboards, guides. Underlying enum values (`micro/mid/macro`)
+  unchanged — no DB change.
+- **Signup:** Google sign-in now **requires** the ToS + privacy tick-boxes (was only
+  role-checked).
+- **Leave-site popup:** `logout-button.tsx` now shows a “You're leaving Adswish”
+  Proceed/Back modal + a `beforeunload` guard for closing the tab.
+- **Profile pages:** “next phase” plan banner → “View plans” link to `/plans`.
+- **Avatar upload:** new `POST /api/internal/profile/avatar` (5MB PNG/JPEG/WebP/GIF →
+  public `profile-images` bucket; stamps `creator_profiles.profile_picture_url` or
+  `business_profiles.logo_url`) + `AvatarUpload` client component wired into both
+  profile pages. **Migration 024 (bucket) NOT applied yet.**
+- **Paid plans → Stripe:** new `POST /api/internal/stripe/subscribe` (Checkout mode
+  subscription, inline price, metadata user_id/role/plan_slug) + both onboarding
+  `plan_selection` pages redirect to Stripe for paid plans. `syncSubscription` now
+  upserts on the owner column. **Migration 025 (unique owner index) NOT applied yet.**
+- **Chrome extension:** popup now has a **green/red status dot** (live heartbeat check);
+  generated brand-blue PNG icons (16/48/128) + manifest `icons`/`default_icon`;
+  re-zipped as `chrome-extension/adswish-tracker-v1.2.0.zip` (Web-Store-ready).
+- **Verified:** typecheck clean · lint 0 errors (5 pre-existing warnings) ·
+  **162/162 tests** · build passes (new `/plans` + `/businesses` static pages).
+- **NOT deployed.** Full user action-item guide: `WILL_ACTION_ITEMS.md`.
+
+## Latest — Balance + analytics + limits + tracking + Google fix (Aug 19, NOT pushed)
+
+- **Migrations 024–027 APPLIED to cloud:** profile-images bucket, subscription
+  unique owner index, `business_profiles.balance_cents` + `balance_transactions` +
+  `cashout_requests` (RLS owner-read), campaigns `hashtags`/`media_url`/
+  `manual_review` + `status` now allows `closed`.
+- **Balance system:** `src/lib/balance.ts` (credit/debit ledger, 90/10 cash-out
+  split, £10 min). `POST /api/internal/balance/topup` (Stripe one-time Checkout),
+  `GET/POST /api/internal/balance` (balance + transactions + cash-out request),
+  webhook `checkout.session.completed` credits `metadata.kind="topup"`. Balance
+  widget on `/dashboard/business/payments`.
+- **Fixed-accept balance check:** accepting a creator on a `fixed` campaign now
+  debits `fixed_amount` from the business balance; insufficient → campaign set
+  `closed`, all applicants + business notified, business emailed. Acceptance now
+  also emails the creator (Resend REST helper in `src/lib/email.ts`, no SDK).
+- **Business plan limits:** `BUSINESS_PLAN_CAMPAIGN_LIMITS` free 3 / growth 20 /
+  enterprise ∞ enforced in `POST /api/internal/campaigns`.
+- **Analytics:** new `/dashboard/creator/analytics` + `/dashboard/business/analytics`
+  (clicks/conversions/gross/90-10 from `daily_conversion_rollups`) + nav items.
+- **Google sign-in persistence FIX:** `/auth/callback` no longer resets
+  `onboarding_step` on every OAuth sign-in (was forcing users back through
+  onboarding).
+- **Appearance settings:** `ThemeProvider` + `src/lib/appearance.ts` + Settings
+  “Appearance” card — dark/light/system, font-size (sm/md/lg), accent colour
+  (blue/violet/emerald/rose/slate). CSS hooks in `globals.css`.
+- **Campaign creation:** new-campaign form now has per-platform hashtags
+  (TikTok/Instagram/YouTube), preview media URL, and a manual-review checkbox.
+- **Two-layer tracking:** `GET /api/internal/tracking/status` + `TrackingStatus`
+  UI on the tracking page — in-house pixel/link check + external verified-domain
+  reachability check, two green/red ticks.
+- **Legal:** Terms/Privacy/Subprocessors refreshed (balance + cash-out + tracking
+  sections; removed stale Inngest/Sentry subprocessors).
+- **Verified:** typecheck clean · lint 0 errors (5 pre-existing warnings) ·
+  **162/162 tests** · build passes. Dev server running on :3000 (detached via
+  `scripts/dev-server.mjs`). **NOT deployed to Vercel.**
+
+## Latest — Connections + gating + cash-out + chat fix (Aug 19, NOT pushed)
+
+- **Migrations 028–029 APPLIED:** `connections` (friend requests, RLS) +
+  `campaign_invites` (business→creator invites, RLS); business_profiles now has
+  `stripe_account_id`/`stripe_connect_ready` for cash-outs.
+- **CHAT BUG FIXED:** `campaign-messages.tsx` selected `campaigns.name` but the
+  column is `title` → the messages page always returned empty. Fixed to `title`
+  (+ valid status list). This was why accepted users couldn't message.
+- **Connections/friends:** `GET/POST/PATCH /api/internal/connections`,
+  `GET /api/internal/users/search`, `GET/POST/PATCH /api/internal/campaign-invites`;
+  `ConnectButton` on public creator/business profiles; `ConnectionsPanel` on both
+  Messages pages (Add/search, friends A–Z, accept/reject requests, business
+  “Invite to campaign”).
+- **Campaign gating:** affiliate/hybrid now require Stripe payment method +
+  active tracking/verified domain; fixed campaigns require tracking OR sufficient
+  wallet balance at creation (enforced in `POST /api/internal/campaigns`).
+- **Cash-out wiring:** `/api/internal/stripe/connect-link` now supports business
+  Connect onboarding; `POST /api/internal/balance` attempts a Stripe transfer to
+  the business Connect account when ready, refunds the balance + marks failed on
+  transfer error. Real payouts still need the business to complete Connect
+  onboarding + the platform Connect profile (same human step as creators).
+- **Appearance:** added background (plain/gradient/grid) + content layout
+  (standard/wide) to the Appearance settings.
+- **Global back button** added to the dashboard top bar (`BackButton`).
+- **Verified:** typecheck clean · lint 0 errors (6 pre-existing warnings) ·
+  **162/162 tests** · build passes. **NOT deployed to Vercel.**
+
+## Latest — Invite auto-apply + chat presence + Stripe status (Aug 19, NOT pushed)
+
+- **Invite accept → auto-apply:** `PATCH /api/internal/campaign-invites` now
+  creates a `pending` application (with `tier_at_application`) and notifies the
+  business when a creator accepts an invite.
+- **Chat presence + typing:** `CampaignChat` added a second realtime channel
+  (`chat-social-*`) with Supabase presence (online count) + typing broadcasts.
+- **Connections/invite E2E verified 8/8** (`scripts/connections-e2e.mjs`):
+  friend request → accept → friends list → campaign invite → accept → auto-apply.
+  Fixtures cleaned up.
+- **Stripe platform account checked (read-only):** `acct_1U5S3OLKYp5LxY80` is
+  **fully onboarded** — charges/payouts enabled, details_submitted, `transfers`
+  capability **active**, nothing currently_due. The old “platform questionnaire”
+  blocker is GONE. Payouts/cash-outs now only need each connected account
+  (creator/business) to finish its own onboarding in-app.
+- **Verified:** typecheck clean · lint 0 errors · 162/162 tests · build passes.
+
 ## Latest — extension in Settings + landing page + RLS everywhere
 
 - **RLS everywhere (audited live):** all 41 tables in the cloud DB have RLS enabled
@@ -887,3 +999,87 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - All probe/E2E test accounts deleted (0 remaining). Cleanup note: the creator profile still holds a
   **fake** `stripe_account_id: "acct_e2e_creator"` from the earlier stripe-e2e run — clear it before a
   real payout (`UPDATE creator_profiles SET stripe_account_id = NULL, stripe_connect_ready = false;`).
+
+## Batch: dashboards, emails, third-party uptime, back button (Aug 19)
+
+- **Sightengine moderation keys** written to `.env.local` + `vercel-env.txt` (user-provided
+  API user `522078350` + secret; values not logged). `SIGHTENGINE_API_USER`/`SIGHTENGINE_API_KEY`
+  are what `src/lib/moderation.ts` reads, so moderation is now enabled locally; paste
+  `vercel-env.txt` into Vercel for prod.
+- **Global back button** — `src/components/global-back-button.tsx` (fixed floating "Back",
+  always rendered, calls `router.back()`) mounted in root layout, so it's on every page.
+- **Site-wide external-link guard** — `src/components/external-link-guard.tsx` (capture-phase
+  click interceptor, "You're leaving Adswish" Proceed/Back modal) mounted in root layout.
+- **Business dashboard rebuilt** — `dashboard/business/page.tsx` now shows real campaign list,
+  recent applicants, active-campaign count, pending-applicant count, and wallet balance with
+  a top-up link (no more static zeros).
+- **Styled HTML emails** — `src/lib/email.ts` branded wrapper + `acceptedEmailHtml` /
+  `campaignClosedEmailHtml`; applications route now sends HTML + text.
+- **Third-party uptime layer** — `tracking/status/route.ts` gained an optional
+  `uptimeRobotCheck()` driven by `UPTIME_ROBOT_API_KEY`; `TrackingStatus` renders a third
+  row ("Third-party uptime check"). Only gates `fully_active` when the key is configured.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+- Still not deployed. Docs updated: `WILL_ACTION_ITEMS.md`, `GO_LIVE_CHECKLIST.md`.
+
+## Batch: plan dashboard, tracking false-green fix, charts, uptime UI, chrome notice (Aug 19)
+
+- **Plan dashboard** — new `dashboard/{business,creator}/plan` pages + `PlanDashboard` +
+  `PlanUpgradeButton`; nav items "Plan" added under Messages on both sides. Shows current plan,
+  status, next payment (`current_period_end`), usage vs limits, and upgrade cards (Stripe Checkout).
+- **Tracking false-green fixed** — root cause: `hasLiveLink` counted ANY non-revoked tracking link,
+  and a demo fixture (`scripts/demo-tracking-link.mjs`) left "Demo tracking link — try the extension"
+  + 2 clicks. Deleted that demo campaign/link/clicks (`scripts/cleanup-demo-tracking.mjs`) and
+  tightened the in-house check: now requires a live pixel heartbeat (last 24h) OR a tracking link
+  that has actually received clicks. Migration **030** added a `clicks_log` SELECT policy (business
+  owner + creator) so the status route can check link usage.
+- **Analytics depth** — `AnalyticsCharts` (recharts) added to both analytics pages: daily
+  clicks/conversions bar chart + gross-sales area chart; colours read live CSS vars so charts follow
+  dark mode + accent choice.
+- **Background themes fixed** — grid/gradient backgrounds were hidden behind opaque
+  `min-h-screen bg-background` wrappers; removed that class from dashboard shell, plans page,
+  auth/onboarding layouts, and guide pages so the body pattern shows through.
+- **Uptime instructions** — Tracking page now has a step-by-step UptimeRobot setup block
+  (create monitor → read-only API key → `UPTIME_ROBOT_API_KEY` env var → check again).
+- **Chrome extension notice** — `ChromeExtensionNotice` warns non-Chrome browsers in the tracking
+  page's extension section and links to download Chrome.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+- Not deployed. Preview at http://localhost:3000.
+
+## Batch: plan-limit prompt, fake-account purge, analytics range switcher (Aug 19)
+
+- **Plan limit enforcement** — server already blocked 3/20/unlimited active-campaign limits; the
+  campaign form now surfaces a proper in-app "plan limit reached → Upgrade plan" banner (links to
+  /dashboard/business/plan) instead of a raw `alert()`.
+- **Fake accounts purged** — deleted businesses "sdadadad" (willgreer2025@) + "ddfsf"
+  (willgreer38@), creators "davis" (wgreer301@) + "Sarah" (willgreer007@icloud), and orphan
+  creator@test.com. DB now has zero business/creator profiles, campaigns, applications,
+  tracking_links, clicks, connections. One orphan auth user left: `wilgreer38@gmail.com` (typo,
+  no profile) — flagged, not deleted. Recreated two clean test accounts via
+  `scripts/create-test-accounts.mjs` (business GreerCo / creator Will Greer).
+- **Analytics time-range switcher** — AnalyticsCharts gained Today / 7 days / 30 days buttons
+  (client-side date filter) on both analytics pages.
+- **Browser-verified** — signed in as business (GreerCo) and creator (Will Greer) on localhost:
+  both Plan pages render (current plan, next payment, usage, upgrade cards) and both dashboards
+  load with the new surfaces; logout "You're leaving Adswish" modal confirmed working.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+- Not deployed. Preview at http://localhost:3000.
+
+## Batch: creator plan limits, demo seed, test-mode webhook smoke test (Aug 19)
+
+- **Orphan auth user deleted** — `wilgreer38@gmail.com` (typo, no profile) removed via Auth Admin API.
+- **Creator plan limits enforced** — `CREATOR_PLAN_CAMPAIGN_LIMITS` (creator_free 2 / creator_pro 10 /
+  creator_premium unlimited) added to `campaign-limits.ts`; the apply route now caps
+  `maxActiveCampaigns = min(tierCap, planCap)` and returns an "Upgrade your plan" error; the
+  discover page shows an in-app upgrade banner (links to /dashboard/creator/plan).
+- **Demo data seeded** — `scripts/seed-demo-data.mjs` (idempotent) created 3 campaigns for GreerCo,
+  applications (1 accepted), creator_social_accounts (25k/12.4k/48k followers), reviews, and 14 days
+  of `daily_conversion_rollups` for Will Greer. Verified in-browser: creator analytics now shows
+  2,233 clicks / 103 conversions / £6,329 gross with populated bar + area charts and the range switcher.
+- **Test-mode webhook smoke test** — `scripts/webhook-smoke-test.mjs` verifies Sightengine moderation
+  (real API call, HTTP 200) and the full webhook→ledger path using *synthesized, correctly signed*
+  events (charge.refunded → refunded, dispute.closed/lost → chargeback, payment_intent.payment_failed →
+  refunded) posted to the local `/api/webhooks/stripe`. All 9 checks passed; self-cleaning (conversions,
+  ledger, tracking link, webhook_events, smoke notifications). No Stripe API calls, no money moved —
+  safe with live keys present.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+- Not deployed. Preview at http://localhost:3000. Test accounts: willgreer38@gmail.com / wgreer301@gmail.com (both / 123456).

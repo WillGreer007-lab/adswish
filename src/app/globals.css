@@ -59,6 +59,46 @@
   --secondary-foreground: #f5f6f9;
 }
 
+/* Font-size scale — rem-based so all Tailwind spacing/typography scales. */
+[data-font-size="sm"] { font-size: 87.5%; }
+[data-font-size="md"] { font-size: 100%; }
+[data-font-size="lg"] { font-size: 112.5%; }
+
+/* Accent themes override the brand primary colour. */
+[data-accent="violet"] {
+  --primary: #7c5ce0; --ring: #7c5ce0; --primary-dark: #5f45c4;
+  --primary-light: rgba(124, 92, 224, 0.08);
+}
+[data-accent="emerald"] {
+  --primary: #0e9f6e; --ring: #0e9f6e; --primary-dark: #0b7a55;
+  --primary-light: rgba(14, 159, 110, 0.08);
+}
+[data-accent="rose"] {
+  --primary: #e11d48; --ring: #e11d48; --primary-dark: #be123c;
+  --primary-light: rgba(225, 29, 72, 0.08);
+}
+[data-accent="slate"] {
+  --primary: #475569; --ring: #475569; --primary-dark: #334155;
+  --primary-light: rgba(71, 85, 105, 0.08);
+}
+
+/* Background themes */
+[data-background="gradient"] body {
+  background-image:
+    radial-gradient(1200px 600px at 0% 0%, rgba(58, 92, 224, 0.07), transparent),
+    radial-gradient(1000px 500px at 100% 100%, rgba(124, 92, 224, 0.06), transparent);
+  background-attachment: fixed;
+}
+[data-background="grid"] body {
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Content layout (dashboard) */
+[data-layout="wide"] .dashboard-content { max-width: none; }
+
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
