@@ -64,7 +64,7 @@ export async function POST(
       ? /^https?:\/\//.test(profile.verified_domain)
         ? profile.verified_domain
         : `https://${profile.verified_domain}`
-      : process.env.NEXT_PUBLIC_APP_DOMAIN || "https://adswish.com";
+      : process.env.NEXT_PUBLIC_APP_DOMAIN || "https://adswish-lake.vercel.app";
 
     const link = await createTrackingLink(
       {

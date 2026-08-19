@@ -32,7 +32,31 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — Creator marketplace grid + Chrome extension audit (Aug 19, NOT pushed)
+## Latest — Marketplace filters + full conversion E2E (Aug 19, NOT pushed)
+
+- **Marketplace filters added to /creators** (`CreatorGrid` client component):
+  free-text search (name/niche/handle), tier filter (all/micro/mid/macro),
+  sort (rating / followers / A–Z), and clickable niche chips.
+- **Full conversion E2E verified live — 14/14** (`scripts/conversion-e2e.mjs`):
+  business creates affiliate campaign → creator applies → business accepts
+  (deliverable slots created) → creator submits → business approves (REAL
+  tracking link generated) → GET /t/{slug} 302s with signed `adswish_ref` JWT
+  → conversion webhook → conversion row `pending_hold`, 90/10 split
+  (89.99/10 on a £99.99 order), 7-day hold, linked to the tracking link.
+  All fixtures + tier change cleaned up.
+- **TWO RLS bugs found + fixed (migration 023, applied live):**
+  - `tracking_links` had NO INSERT policy → approve silently never created
+    links (handoff's earlier "done" claim was wrong).
+  - `deliverables` had NO INSERT policy → accept silently never created slots.
+  Both now allow the business owner on their own campaigns.
+- **Config gap fixed:** tracking-link destination fell back to the dead
+  `https://adswish.com`; approve route now falls back to
+  `https://adswish-lake.vercel.app`, and NEXT_PUBLIC_APP_DOMAIN was
+  localhost:3000 locally (fixed in .env.local + vercel-env.txt). **Note:** the
+  Vercel env var still needs adding (deploy-time).
+- Pending local commits (NOT pushed): cf97f0d, 6799ee4 + this batch.
+
+## Earlier — Creator marketplace grid + Chrome extension audit (Aug 19, NOT pushed)
 
 - **New public creator marketplace grid at `/creators`** (landing nav link
   added): discoverable creators with tier badge, niche chips, average rating,
