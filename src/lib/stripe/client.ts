@@ -120,12 +120,4 @@ export async function createCreatorConnectAccount(opts: {
   }
 }
 
-export function calculateCreatorCut(totalAmount: number): number {
-  const rawCut = totalAmount * 0.9;
-  // Round to cents (2 decimals) — money must never lose cent precision.
-  return Math.round(rawCut * 100) / 100;
-}
-
-export function calculatePlatformFee(totalAmount: number): number {
-  return totalAmount - calculateCreatorCut(totalAmount);
-}
+export { calculateCreatorCut, calculatePlatformFee } from "@/lib/payout-math";

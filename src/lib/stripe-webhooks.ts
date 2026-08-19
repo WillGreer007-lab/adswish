@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeClient } from "@/lib/stripe/client";
+import { escrowHoldExpiresAt } from "@/lib/payout-math";
 import { applyRefund, applyChargeback, markChargeFailed } from "@/lib/finance";
 import pino from "pino";
 
@@ -224,7 +225,7 @@ export async function handleStripeEvent(
           .from("conversions")
           .update({
             status: "pending_hold",
-            hold_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            hold_expires_at: escrowHoldExpiresAt(),
           })
           .eq("id", conversion.id);
         await supabase

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyTrackingJwt } from "@/lib/tracking";
-import { calculateCreatorCut, calculatePlatformFee } from "@/lib/stripe/client";
+import { calculateCreatorCut, calculatePlatformFee, escrowHoldExpiresAt } from "@/lib/payout-math";
 
 export type AttributionMethod = "cookie" | "s2s" | "utm_fallback" | "manual";
 
@@ -18,8 +18,6 @@ export interface RecordConversionResult {
   conversionId?: string;
   error?: string;
 }
-
-const HOLD_DAYS = 7;
 
 /**
  * Verify an `adswish_ref` token and record the conversion as a 7-day hold with
@@ -77,7 +75,7 @@ export async function recordConversion(
   const amount = Math.round(input.amountDollars * 100) / 100;
   const creatorCut = calculateCreatorCut(amount);
   const platformCut = calculatePlatformFee(amount);
-  const holdExpiresAt = new Date(Date.now() + HOLD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const holdExpiresAt = escrowHoldExpiresAt();
 
   const { data: conversion, error: insertError } = await supabase
     .from("conversions")
