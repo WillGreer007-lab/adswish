@@ -3,7 +3,7 @@
 // page's CORS origin. host_permissions ("<all_urls>") makes these fetches work
 // cross-origin from the business's own site.
 
-const DEFAULTS = { apiBase: "https://adswish.com", businessId: "" };
+const DEFAULTS = { apiBase: "https://adswish-lake.vercel.app", businessId: "" };
 
 async function getConfig() {
   const stored = await chrome.storage.sync.get(["apiBase", "businessId"]);

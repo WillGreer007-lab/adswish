@@ -32,7 +32,33 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — Social connect on creator profile + YouTube OAuth + sandbox check (Aug 19)
+## Latest — Creator marketplace grid + Chrome extension audit (Aug 19, NOT pushed)
+
+- **New public creator marketplace grid at `/creators`** (landing nav link
+  added): discoverable creators with tier badge, niche chips, average rating,
+  total followers, and green Verified badges with platform icons (YouTube/
+  Instagram/TikTok) per connected account. Cards link to each creator profile.
+  Filter: only shows creators with rating > 0 or at least one verified social.
+- **Chrome extension audit (works):**
+  - Settings → Tracking & Attribution card → tracking page has the extension
+    section with step-by-step install steps + the real API base + business ID.
+  - Live-verified: `POST /api/v1/pixel/ping` → 200 (heartbeat), CORS
+    OPTIONS → 204 with `*` (works from any business domain), conversion
+    webhook rejects bogus tokens (security fine), `/t/{slug}` → 410 for
+    unknown slugs.
+  - Tracking-method toggle (pixel script vs extension) live-tested → persists
+    to DB (`tracking_method`), restored afterward.
+  - **FIXED:** extension `background.js` default `apiBase` was the dead
+    `https://adswish.com` placeholder — now `https://adswish-lake.vercel.app`
+    so the extension works out of the box (options still allow override).
+  - What the extension needs to fire a conversion: a real tracking link
+    (`/t/{slug}`) from campaign approval + the token in the URL/cookie +
+    businessId configured in options. Auto-detect mode needs URL pattern +
+    amount selector in options.
+- Pending local commits (not pushed): `cf97f0d` (token refresh fix, IG
+  long-lived tokens, cron wiring, verified badges) + this batch.
+
+## Earlier — Social connect on creator profile + YouTube OAuth + sandbox check (Aug 19)
 
 - **Creator profile settings now has a live social section** —
   `SocialConnections` component (connect/disconnect TikTok, Instagram, YouTube

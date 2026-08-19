@@ -427,6 +427,7 @@ export default function LandingPage() {
                 ))}
               </div>
             </div>
+            <Link href="/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Creators</Link>
             <a href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How it works</a>
             <a href="#perks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Perks</a>
             <a href="#guides" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Guides</a>
