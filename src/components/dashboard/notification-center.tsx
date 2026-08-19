@@ -22,6 +22,8 @@ export function NotificationCenter({ userId }: { userId: string }) {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (!userId) return;
+
     async function fetchNotifications() {
       const supabase = createSupabaseBrowserClient();
       const [{ data }, { data: prefs }] = await Promise.all([

@@ -1116,15 +1116,24 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - **Admin** — willgreer38@gmail.com has app_metadata.role=admin; MFA (aal2) still required by the
   admin layout. Published again: 16ae547 → 9b2365c, site healthy.
 - Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
-+
-+## Batch: admin MFA loop fix (Aug 19)
-+
-+- **Root cause of "MFA redirect nothing works":** the admin layout checked AAL and redirected
-+  to /admin/mfa-setup — but the layout also wraps the mfa-setup page itself, so any visit to
-+  /admin/mfa-setup at AAL1 became an infinite redirect loop (browser gives up, page never loads).
-+- **Fix:** moved the AAL2 gate into middleware (src/lib/supabase/middleware.ts), which knows the
-+  pathname and exempts /admin/mfa-setup; removed the AAL check from the admin layout. Verified the
-+  AAL call is pure local JWT decoding (works in Edge middleware, no network).
-+- **Hardened mfa-setup page:** detects an already-verified TOTP factor on load and offers a
-+  verify-only "Enter your code" flow instead of erroring on a duplicate enroll.
-+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+
+## Batch: admin MFA loop fix (Aug 19)
+
+- **Root cause of "MFA redirect nothing works":** the admin layout checked AAL and redirected
+  to /admin/mfa-setup — but the layout also wraps the mfa-setup page itself, so any visit to
+  /admin/mfa-setup at AAL1 became an infinite redirect loop (browser gives up, page never loads).
+- **Fix:** moved the AAL2 gate into middleware (src/lib/supabase/middleware.ts), which knows the
+  pathname and exempts /admin/mfa-setup; removed the AAL check from the admin layout. Verified the
+  AAL call is pure local JWT decoding (works in Edge middleware, no network).
+- **Hardened mfa-setup page:** detects an already-verified TOTP factor on load and offers a
+  verify-only "Enter your code" flow instead of erroring on a duplicate enroll.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+
+## Batch: MFA redirect preservation, CSP hydration, and production regression tooling (Aug 19)
+
+- **Admin login redirect fixed:** middleware now preserves the original protected path in `?redirect=` when sending an unauthenticated admin to `/login`. After sign-in, `/admin` returns to `/admin/mfa-setup` instead of silently landing on `/dashboard`.
+- **Admin MFA page hydration fixed:** the admin-only CSP was blocking Next.js inline App Router bootstrap scripts. This left `/admin/mfa-setup` visually blank after the redirect. Admin CSP now allows required inline bootstrap scripts while still disabling `unsafe-eval`.
+- **Dashboard noise fixed:** NotificationCenter waits for a real user ID before querying Supabase, preventing 400 requests with `user_id=eq.` during the creator Discover page's initial render. Deliverable +/- buttons now have accessible names.
+- **Regression tooling:** `scripts/production-regression.mjs` exercises public, business, creator, and admin MFA routes in a real Chromium browser, checks placeholder links/unnamed buttons/client errors, and writes `PRODUCTION_REGRESSION.md`. It never creates campaigns/payments; any temporary MFA factor is cleaned up.
+- **Deploy tooling:** `scripts/check-deploy.mjs` now reports Vercel production deployment state and deploy URL when `VERCEL_TOKEN` is available, using the linked `.vercel/project.json` as the project-ID fallback. No token exists in `.env.local` yet; it must be supplied by the account owner and is never committed or printed.
+- Verification before deploy: typecheck clean · lint 0 errors (6 warnings) · 162/162 tests · build passes.

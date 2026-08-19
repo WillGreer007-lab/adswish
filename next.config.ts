@@ -40,7 +40,10 @@ const adminSecurityHeaders = [
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self'",
+      // Next.js emits inline bootstrap scripts for App Router hydration. Keep
+      // unsafe-eval disabled, but allow the inline scripts needed by all admin
+      // client components (including the MFA setup form).
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https://*.supabase.co",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co",

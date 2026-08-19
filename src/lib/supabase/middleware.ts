@@ -45,7 +45,13 @@ export async function updateSession(request: NextRequest) {
   if (request.nextUrl.pathname.startsWith("/admin")) {
     if (user.error || !user.data.user) {
       const url = request.nextUrl.clone();
+      const returnTo = `${request.nextUrl.pathname}${request.nextUrl.search}`;
       url.pathname = "/login";
+      url.search = "";
+      // Preserve the protected destination so signing in from /admin or
+      // /admin/mfa-setup returns the user to the MFA screen instead of
+      // silently sending them to the generic dashboard.
+      url.searchParams.set("redirect", returnTo);
       return NextResponse.redirect(url);
     }
 

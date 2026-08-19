@@ -263,9 +263,9 @@ export default function NewCampaignPage() {
           <div className="flex items-center gap-3">
             <Label>Number of deliverables</Label>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => updateDeliverableCount(Math.max(1, deliverableCount - 1))} className="flex h-8 w-8 items-center justify-center rounded-md border border-border">−</button>
+              <button type="button" aria-label="Remove a deliverable" onClick={() => updateDeliverableCount(Math.max(1, deliverableCount - 1))} className="flex h-8 w-8 items-center justify-center rounded-md border border-border">−</button>
               <span className="font-mono text-lg font-bold w-8 text-center">{deliverableCount}</span>
-              <button type="button" onClick={() => updateDeliverableCount(Math.min(10, deliverableCount + 1))} className="flex h-8 w-8 items-center justify-center rounded-md border border-border"><Plus className="h-4 w-4" /></button>
+              <button type="button" aria-label="Add a deliverable" onClick={() => updateDeliverableCount(Math.min(10, deliverableCount + 1))} className="flex h-8 w-8 items-center justify-center rounded-md border border-border"><Plus className="h-4 w-4" /></button>
             </div>
           </div>
 
