@@ -14,11 +14,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/dashboard");
   }
 
-  const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-  if (!aalData || aalData.currentLevel !== "aal2") {
-    redirect("/admin/mfa-setup");
-  }
+  // MFA (AAL2) enforcement lives in middleware, which exempts the
+  // /admin/mfa-setup enrollment page itself. Checking AAL here caused an
+  // infinite redirect loop because this layout wraps mfa-setup too.
 
   return (
     <div className="min-h-screen bg-foreground text-background">

@@ -55,6 +55,21 @@ export async function updateSession(request: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
+
+    // MFA gate: admins must reach AAL2 before touching admin routes. The
+    // enrollment page itself must be reachable at AAL1, so it is exempt here.
+    // (This lives in middleware rather than the admin layout because the
+    // layout also wraps /admin/mfa-setup — checking there caused an infinite
+    // redirect loop.)
+    if (request.nextUrl.pathname !== "/admin/mfa-setup") {
+      const { data: aalData } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (!aalData || aalData.currentLevel !== "aal2") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/mfa-setup";
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   if (

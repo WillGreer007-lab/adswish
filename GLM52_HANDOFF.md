@@ -1098,3 +1098,33 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
 - Production webhook smoke test still blocked on: env vars pasted into Vercel + prod URL +
   prod webhook secret (see WILL_ACTION_ITEMS / GO_LIVE_CHECKLIST).
+
+## Batch: production smoke test passed, zero fake data, deploy check, empty states (Aug 19)
+
+- **Production webhook smoke test PASSED 9/9** — local STRIPE_WEBHOOK_SECRET verified against
+  the live endpoint (probe `scripts/probe-prod-webhook.mjs`), then the full synthesized
+  charge/refund/dispute flow ran against https://adswish-lake.vercel.app with correct ledger
+  transitions and complete cleanup. Smoke test is now self-contained (creates + removes its own
+  temporary campaign) and takes a base URL arg.
+- **Zero fake data in production** — verified all tables at 0: campaigns, conversions,
+  tracking_links, ledger_entries, webhook_events, notifications, applications, reviews,
+  clicks_log. New `scripts/purge-test-leftovers.mjs` removed orphaned ledger rows + stale events.
+- **Deploy health check** — `scripts/check-deploy.mjs` curls the live URL + 5 key routes after
+  every push (all 200). Optionally uses VERCEL_TOKEN if ever configured.
+- **Directory empty states** — /creators and /businesses now show a friendly "No creators/businesses
+  yet" card with a Join CTA when the directory is brand new (distinct from the filter-empty state).
+- **Admin** — willgreer38@gmail.com has app_metadata.role=admin; MFA (aal2) still required by the
+  admin layout. Published again: 16ae547 → 9b2365c, site healthy.
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
++
++## Batch: admin MFA loop fix (Aug 19)
++
++- **Root cause of "MFA redirect nothing works":** the admin layout checked AAL and redirected
++  to /admin/mfa-setup — but the layout also wraps the mfa-setup page itself, so any visit to
++  /admin/mfa-setup at AAL1 became an infinite redirect loop (browser gives up, page never loads).
++- **Fix:** moved the AAL2 gate into middleware (src/lib/supabase/middleware.ts), which knows the
++  pathname and exempts /admin/mfa-setup; removed the AAL check from the admin layout. Verified the
++  AAL call is pure local JWT decoding (works in Edge middleware, no network).
++- **Hardened mfa-setup page:** detects an already-verified TOTP factor on load and offers a
++  verify-only "Enter your code" flow instead of erroring on a duplicate enroll.
++- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
