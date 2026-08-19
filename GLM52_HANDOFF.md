@@ -32,7 +32,26 @@
 - **Verified:** typecheck clean · lint 0 errors (4 pre-existing img warnings) ·
   **141/141 tests** · build passes with 63 static pages incl. the new settings hub.
 
-## Latest — Social OAuth buttons + admin MFA + Connect v1 status (Aug 19)
+## Latest — Social connect on creator profile + YouTube OAuth + sandbox check (Aug 19)
+
+- **Creator profile settings now has a live social section** —
+  `SocialConnections` component (connect/disconnect TikTok, Instagram, YouTube
+  after onboarding). New `/api/internal/oauth/disconnect` route (soft-delete +
+  token wipe) and new `/api/internal/oauth/youtube` initiate route (Google
+  OAuth, youtube.readonly scope). Connect buttons 307 to the provider via the
+  existing callbacks; the whole loop is guarded when keys are unset.
+- **Sandbox verification script ready:** `scripts/oauth-keys-check.mjs`
+  verifies key presence + well-formedness, checks the production initiate
+  routes redirect correctly, and prints exact authorize-URL shapes. Run it
+  after pasting keys; the full authorize → callback → upsert exchange still
+  needs a human completing provider consent in a browser.
+- **Stripe Connect questionnaire guide added to GO_LIVE_CHECKLIST.md** —
+  step-by-step for the platform-profile form that unlocks v1 payouts.
+- **Keys still empty** (Will to add): INSTAGRAM_CLIENT_ID/SECRET,
+  TIKTOK_CLIENT_KEY/SECRET in .env.local + Vercel. GOOGLE_CLIENT_ID/SECRET
+  are set, so YouTube Connect is ready to test immediately.
+
+## Earlier — Social OAuth buttons + admin MFA + Connect v1 status (Aug 19)
 
 - **TikTok + Instagram OAuth now wired into onboarding:** new initiate routes
   (`/api/internal/oauth/tiktok`, `/api/internal/oauth/instagram`) redirect to

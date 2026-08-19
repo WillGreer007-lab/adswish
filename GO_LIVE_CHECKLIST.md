@@ -145,3 +145,38 @@ review; skip if you don't need social proof verification yet.
 4. Business → **Settings → Tracking** → shows your real Business ID + API URL.
 5. Ask me to run the cron base-URL update + a live webhook smoke test once you have
    the URL, and I'll verify the scheduled jobs fire against production.
+
+---
+
+## Stripe Connect questionnaire (unlocks creator payouts — v1)
+
+Live probe confirmed: your account's `transfers` capability is **active** and
+v1 Express account creation is only blocked by the uncompleted Connect
+platform questionnaire. Complete it and payouts work with **zero code changes**.
+
+1. Open `https://dashboard.stripe.com/connect/accounts/overview` (logged in as
+   the account that owns the `sk_live_` key).
+2. Click **Start onboarding / Complete platform profile** and answer the
+   questionnaire honestly:
+   - **Business details** — company name, country (GB), website
+     (`https://adswish-lake.vercel.app`), business model (platform / two-sided
+     marketplace connecting brands with creators).
+   - **Processing volume** — estimate monthly transaction volume (e.g. £5,000
+     to start). Keep it conservative — it only gates risk underwriting.
+   - **Products/services** — describe the service: "Adswish connects businesses
+     with creators for affiliate campaigns. Businesses pay for campaigns;
+     creators earn 90% of attributable sales via instant payouts."
+   - **Bank account for platform fees** — verify the payout account.
+   - Review + submit.
+3. Stripe usually approves instantly or within a few business days. You'll get
+   an email; the dashboard shows "Connect enabled".
+4. Tell me when it's approved and I'll re-run the v1 Express probe
+   (create account → account link) to confirm real payouts can clear.
+
+Notes:
+- Do **not** misstate volume/business type — Connect approval is a KYC gate.
+- The questionnaire is a one-time platform-level step; individual creators
+  still complete their own hosted onboarding (test values: SSN `000-00-0000`,
+  bank routing `110000000`, account `000123456789`).
+- If Stripe requires it, you may also need to accept Stripe's "Connect
+  Accounts" terms in the same settings page.

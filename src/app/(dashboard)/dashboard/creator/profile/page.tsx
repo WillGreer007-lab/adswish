@@ -2,18 +2,13 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Instagram, Youtube, Music2 } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { SocialConnections } from "@/components/dashboard/social-connections";
 
 const tierStyles: Record<string, string> = {
   micro: "bg-muted text-muted-foreground",
   mid: "bg-primary/10 text-primary",
   macro: "bg-warning/10 text-warning",
-};
-
-const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  instagram: Instagram,
-  youtube: Youtube,
-  tiktok: Music2,
 };
 
 export default async function CreatorProfilePage({
@@ -108,29 +103,7 @@ export default async function CreatorProfilePage({
 
         <div className="rounded-lg border border-border bg-surface p-5">
           <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>
-          {!socials || socials.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No social accounts connected yet. You&apos;ll connect them during onboarding or later from this page.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {socials.map((s) => {
-                const Icon = platformIcons[s.platform] || Instagram;
-                return (
-                  <div key={s.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                    <div className="flex items-center gap-2">
-                      <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">@{s.handle}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{s.follower_count?.toLocaleString()} followers</span>
-                      {s.verified_at && <Badge variant="success">Verified</Badge>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <SocialConnections initial={(socials ?? []) as never} />
         </div>
       </div>
     </DashboardShell>
