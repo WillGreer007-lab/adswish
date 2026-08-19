@@ -66,7 +66,21 @@ export function BusinessGrid({ businesses }: { businesses: BusinessRow[] }) {
         </select>
       </div>
 
-      {rows.length === 0 ? (
+      {businesses.length === 0 ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+          <Building2 className="mb-3 h-10 w-10 text-muted-foreground/40" />
+          <p className="font-heading text-lg font-bold">No businesses yet</p>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            Adswish is brand new — your company could be the first to launch campaigns here.
+          </p>
+          <Link
+            href="/signup?role=business"
+            className="mt-5 inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark"
+          >
+            Join as a business
+          </Link>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 text-center">
           <Building2 className="mb-3 h-8 w-8 text-muted-foreground/40" />
           <p className="text-sm font-medium">No businesses match your search</p>

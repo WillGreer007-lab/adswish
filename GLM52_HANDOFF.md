@@ -1083,3 +1083,18 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
   safe with live keys present.
 - Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
 - Not deployed. Preview at http://localhost:3000. Test accounts: willgreer38@gmail.com / wgreer301@gmail.com (both / 123456).
+
+## Batch: publish to production, dev/admin account, demo-data reset, plan caps (Aug 19)
+
+- **PUBLISHED** — committed 102 files and pushed `main` (16ae547). Vercel auto-deploys on push.
+- **Demo data removed** — `scripts/reset-demo-data.mjs` cleared seeded campaigns, applications,
+  rollups, socials, reviews, notifications, and reset the two profiles' bio/niches/tier/rating to
+  defaults. Production DB now has only the two clean test accounts (no fake data).
+- **Plan page caps** — creator Plan page now shows a "Your active-campaign limits" card with
+  Tier cap / Plan cap / Effective cap (min of the two).
+- **Dev/admin account** — promoted `willgreer38@gmail.com` to `app_metadata.role = "admin"`.
+  Admin routes are gated on MFA (aal2): the user must visit /admin/mfa-setup and enroll TOTM
+  before /admin works. Business dashboard still reachable (user_metadata.role stays "business").
+- Verification: typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+- Production webhook smoke test still blocked on: env vars pasted into Vercel + prod URL +
+  prod webhook secret (see WILL_ACTION_ITEMS / GO_LIVE_CHECKLIST).

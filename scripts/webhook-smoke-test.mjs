@@ -21,7 +21,8 @@ for (const line of readFileSync(".env.local", "utf8").split("\n")) {
 const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
 const SR = env.SUPABASE_SERVICE_ROLE_KEY;
 const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
-const BASE = "http://localhost:3000";
+// Usage: node scripts/webhook-smoke-test.mjs [base-url]  (default: localhost:3000)
+const BASE = process.argv[2] ?? "http://localhost:3000";
 
 if (env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) {
   console.log("⚠️  STRIPE_SECRET_KEY is LIVE. This test never calls Stripe, so it is still safe,");
@@ -95,15 +96,25 @@ if (!business || !creator) {
   process.exit(1);
 }
 
-// Pick a campaign owned by the business.
-const campRes = await rest("campaigns", "GET", null, `?business_id=eq.${business.id}&limit=1&select=id`);
+// Create a temporary campaign owned by the business (fully removed at cleanup).
+const campStamp = Date.now().toString(36);
+const campRes = await rest("campaigns", "POST", {
+  business_id: business.id,
+  title: `Smoke test ${campStamp}`,
+  type: "fixed",
+  fixed_amount: 100,
+  status: "active",
+  deliverable_count: 1,
+  currency: "GBP",
+}, "?select=id");
 const campaign = Array.isArray(campRes.json) ? campRes.json[0] : null;
 if (!campaign) {
-  console.error("No seeded campaign found.", `HTTP ${campRes.status}`, JSON.stringify(campRes.json));
+  console.error("create campaign failed", campRes.status, JSON.stringify(campRes.json));
   process.exit(1);
 }
+pass("created temporary campaign");
 
-const slug = `smoke${Date.now().toString(36)}`;
+const slug = `smoke${campStamp}`;
 const linkRes = await rest("tracking_links", "POST", {
   creator_id: creator.id,
   campaign_id: campaign.id,
@@ -184,9 +195,10 @@ console.log("\n== Cleanup ==");
 await rest("ledger_entries", "DELETE", null, `?related_conversion_id=in.(${createdConversions.join(",")})`);
 await rest("conversions", "DELETE", null, `?id=in.(${createdConversions.join(",")})`);
 await rest("tracking_links", "DELETE", null, `?id=eq.${link.id}`);
+await rest("campaigns", "DELETE", null, `?id=eq.${campaign.id}`);
 const projRef = SUPABASE_URL.replace(/^https?:\/\//, "").split(".")[0];
 for (const query of [
-  `DELETE FROM webhook_events WHERE event_id LIKE 'evt_%${slug}';`,
+  `DELETE FROM webhook_events WHERE event_id LIKE 'evt_%${slug}' OR event_id LIKE 'evt_probe_%';`,
   `DELETE FROM notifications WHERE body LIKE '%(smoke)%';`,
 ]) {
   await fetch(`https://api.supabase.com/v1/projects/${projRef}/database/query`, {
@@ -195,7 +207,7 @@ for (const query of [
     body: JSON.stringify({ query }),
   });
 }
-pass("cleaned up smoke conversions, ledger, link, webhook events");
+pass("cleaned up smoke conversions, ledger, link, campaign, webhook events");
 
 console.log(`\n${failures === 0 ? "✅ All smoke checks passed." : `❌ ${failures} check(s) failed.`}`);
 process.exit(failures === 0 ? 0 : 1);

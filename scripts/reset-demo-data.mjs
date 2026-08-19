@@ -36,13 +36,16 @@ if (business) {
   await sql(`DELETE FROM campaigns WHERE business_id = '${business.id}';`);
   await sql(`DELETE FROM reviews WHERE reviewer_id = '${business.id}' OR reviewee_id = '${business.id}';`);
   await sql(`DELETE FROM balance_transactions WHERE business_id = '${business.id}';`);
+  await sql(`UPDATE business_profiles SET bio = '', average_rating = 0 WHERE user_id = '${business.id}';`);
 }
 if (creator) {
   await sql(`DELETE FROM daily_conversion_rollups WHERE creator_id = '${creator.id}';`);
   await sql(`DELETE FROM applications WHERE creator_id = '${creator.id}';`);
   await sql(`DELETE FROM creator_social_accounts WHERE creator_id = '${creator.id}';`);
   await sql(`DELETE FROM reviews WHERE reviewer_id = '${creator.id}' OR reviewee_id = '${creator.id}';`);
+  await sql(`UPDATE creator_profiles SET bio = '', niches = '{}', tier = 'micro', average_rating = 0 WHERE user_id = '${creator.id}';`);
 }
+await sql("DELETE FROM notifications WHERE body LIKE '%review%' OR body LIKE '%smoke%';");
 
 console.log("Demo data removed. Accounts kept:");
 console.log(`  business ${business?.email} (${business?.id})`);

@@ -131,7 +131,21 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
         </div>
       )}
 
-      {rows.length === 0 ? (
+      {creators.length === 0 ? (
+        <div className="flex min-h-72 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 px-6 text-center">
+          <Users className="mb-3 h-10 w-10 text-muted-foreground/40" />
+          <p className="font-heading text-lg font-bold">No creators yet</p>
+          <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+            The Adswish directory is brand new — be the first creator to join.
+          </p>
+          <Link
+            href="/signup?role=creator"
+            className="mt-5 inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-dark"
+          >
+            Join as a creator
+          </Link>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 text-center">
           <Users className="mb-3 h-8 w-8 text-muted-foreground/40" />
           <p className="text-sm font-medium">No creators match your filters</p>
