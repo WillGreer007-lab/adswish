@@ -15,17 +15,17 @@ code required.
 
 ## Configure (required)
 
-In the extension Options:
+In the extension Options, only two fields matter:
 
 - **Adswish API base URL** — the origin that serves `/pixel.js`:
   - Local dev: `http://localhost:3000`
-  - Production: your deployed URL, e.g. `https://your-app.com`
+  - Production: your deployed URL, e.g. `https://adswish-lake.vercel.app`
 - **Business ID** — your Adswish business account UUID (shown on the in-app
   **Settings → Tracking** page).
-- **Tracked site domain** — the domain where conversions happen
-  (e.g. `yourstore.com`). Saving requests host access for this domain + the API
-  URL above (the extension uses **optional host permissions**, so access is
-  granted per-domain at runtime, not `all_urls`).
+
+`Tracked site domain` is optional (informational only) — the extension works on
+**any** domain out of the box because its host permissions are declared in the
+manifest, not requested per-domain at runtime.
 
 ## Auto-detect conversions (optional, no code)
 
@@ -62,11 +62,14 @@ attributed, keep using the `/pixel.js` script (or GTM template).
 
 ## Permissions (Web Store)
 
-- `storage` — saves your config (API URL, business ID, site domain, auto-detect rules).
+- `storage` — saves your config (API URL, business ID, auto-detect rules).
 - `activeTab` — lets the popup read the current tab's token when you click it.
-- `optional_host_permissions: <all_urls>` — the maximum grantable surface, but
-  the extension only **requests** your configured API URL + tracked-site domain
-  at save time. No broad `all_urls` access is taken at install.
+- `host_permissions: http://*/* + https://*/*` — **required** for the tracker to
+  work: the content scripts must inject into the business's site to capture the
+  `adswish_ref` token, and the background service worker fetches the Adswish API
+  cross-origin (MV3 service-worker fetches are not subject to the page's CORS,
+  but they do require host permissions). Expect the Web Store to show the
+  "Read and change all your data on all websites" warning.
 
 ## Packaging for the Chrome Web Store
 
@@ -74,5 +77,6 @@ attributed, keep using the `/pixel.js` script (or GTM template).
 2. Zip the folder (exclude `README.md`/`STORE_LISTING.md` if you like):
    `zip -r adswish-tracker.zip . -x "*.md"`
 3. Upload to the Chrome Web Store Developer Dashboard; use `STORE_LISTING.md`
-   for the listing copy and note that "Host permissions" are optional and
-   requested per-domain.
+   for the listing copy. The store listing must disclose the broad host
+   permission ("reads data on all sites") — it is required for the extension's
+   function, so justify it in the "Justification" field during review.

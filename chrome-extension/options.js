@@ -10,34 +10,20 @@ chrome.storage.sync.get(DEFAULTS, (stored) => {
   });
 });
 
-function originOf(url) {
-  try {
-    return new URL(url.startsWith("http") ? url : "https://" + url).origin;
-  } catch {
-    return null;
-  }
-}
-
-document.getElementById("save").addEventListener("click", async () => {
+document.getElementById("save").addEventListener("click", () => {
   const values = {};
   ids.forEach((id) => (values[id] = fields[id].value.trim()));
 
-  const apiOrigin = originOf(values.apiBase);
-  const siteOrigin = originOf(values.siteDomain);
-
-  // Request host access for the API (fetch from the service worker) and the
-  // tracked site (content-script injection). Skip if already granted.
-  const origins = [apiOrigin, siteOrigin].filter(Boolean).map((o) => `${o}/*`);
-  const granted = origins.length
-    ? await chrome.permissions.request({ origins })
-    : true;
-
+  // Host access comes from the manifest's host_permissions (all sites), so no
+  // runtime permission request is needed — the tracker works on any domain.
+  // apiBase + businessId are the only required fields; siteDomain and the
+  // auto-detect fields are optional helpers.
   chrome.storage.sync.set(values, () => {
-    if (origins.length && !granted) {
-      status.textContent = "⚠ Saved, but site access was not granted — the tracker won't run on that domain.";
+    if (!values.apiBase || !values.businessId) {
+      status.textContent = "⚠ Saved — set the API base URL and Business ID for the tracker to work.";
     } else {
-      status.textContent = "✓ Saved";
+      status.textContent = "✓ Saved — the tracker is active on all sites.";
     }
-    setTimeout(() => (status.textContent = ""), 3000);
+    setTimeout(() => (status.textContent = ""), 3500);
   });
 });
