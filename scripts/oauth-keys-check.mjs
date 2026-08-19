@@ -51,13 +51,14 @@ for (const p of providers) {
 // Production initiate routes
 console.log("\nProduction initiate route behavior:");
 for (const platform of ["tiktok", "instagram", "youtube"]) {
-  const res = await fetch(`${BASE}/api/internal/oauth/${platform}`);
+  const res = await fetch(`${BASE}/api/internal/oauth/${platform}`, { redirect: "manual" });
   const loc = res.headers.get("location") ?? "";
   const configured = /accounts\.google|tiktok\.com\/v2|api\.instagram\.com/.test(loc);
   const guarded = /not_configured/.test(loc);
   console.log(`   /${platform}: ${res.status} → ${loc.slice(0, 90)}`);
   if (configured) check(`${platform}: route redirects to provider (keys live)`, true);
   else if (guarded) check(`${platform}: route guards with not_configured (keys absent)`, true, "expected until keys added");
+  else if (/\/login/.test(loc)) check(`${platform}: route requires auth (login redirect)`, true, "correct for unauthenticated probe");
   else check(`${platform}: unexpected response`, false, loc);
 }
 
