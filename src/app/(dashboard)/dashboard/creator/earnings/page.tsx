@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
+import { formatCurrency } from "@/lib/utils";
 import { Wallet, Clock3, CircleDollarSign, FileText } from "lucide-react";
 
 type LedgerRow = {
@@ -18,6 +20,8 @@ type InvoiceRow = {
   pdf_url: string | null;
   sent_at: string | null;
 };
+
+const money = (n: number) => formatCurrency(n);
 
 const ledgerLabels: Record<string, { label: string; cls: string }> = {
   hold: { label: "Hold", cls: "text-warning" },
@@ -82,13 +86,13 @@ export default async function CreatorEarningsPage() {
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <CircleDollarSign className="h-4 w-4" /> Released
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-success">${released.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-success">{money(released)}</p>
           </div>
           <div className="rounded-lg border border-border bg-surface p-5">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <Clock3 className="h-4 w-4" /> On hold
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-warning">${held.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-warning">{money(held)}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Holds release automatically after the conversion window.
             </p>
@@ -97,7 +101,7 @@ export default async function CreatorEarningsPage() {
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <Wallet className="h-4 w-4" /> Clawbacks
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-destructive">${clawedBack.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-destructive">{money(clawedBack)}</p>
           </div>
         </div>
 
@@ -126,7 +130,7 @@ export default async function CreatorEarningsPage() {
                       </p>
                     </div>
                     <p className="font-mono text-sm font-semibold">
-                      {Number(l.amount) < 0 ? "-" : "+"}${Math.abs(Number(l.amount)).toFixed(2)}
+                      {Number(l.amount) < 0 ? "-" : "+"}{money(Math.abs(Number(l.amount)))}
                     </p>
                   </div>
                 );
@@ -156,8 +160,14 @@ export default async function CreatorEarningsPage() {
                     <p className="text-xs text-muted-foreground">
                       {inv.sent_at ? `Sent ${new Date(inv.sent_at).toLocaleDateString()}` : "Not sent yet"}
                     </p>
-                  </div>
-                  <p className="font-mono text-sm font-semibold">${Number(inv.total_released).toFixed(2)}</p>
+                  </div>                    <div className="flex flex-col items-end gap-1">
+                      <p className="font-mono text-sm font-semibold">{money(Number(inv.total_released))}</p>
+                      {inv.pdf_url && (
+                        <Link href={`/api/internal/payout-invoices/${inv.id}`} className="text-xs font-medium text-primary hover:underline">
+                          Download PDF
+                        </Link>
+                      )}
+                    </div>
                 </div>
               ))}
             </div>

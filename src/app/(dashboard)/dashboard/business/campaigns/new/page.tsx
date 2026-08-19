@@ -182,7 +182,7 @@ export default function NewCampaignPage() {
                 >
                   <Badge variant={typeConfig[t].color} className="mb-1">{typeConfig[t].label}</Badge>
                   <span className="text-xs text-muted-foreground">
-                    {t === "fixed" ? "$ per post" : t === "affiliate" ? "% per sale" : "$ + % per sale"}
+                    {t === "fixed" ? "£ per post" : t === "affiliate" ? "% per sale" : "£ + % per sale"}
                   </span>
                 </button>
               ))}
@@ -192,7 +192,7 @@ export default function NewCampaignPage() {
           <div className="grid grid-cols-2 gap-4">
             {type !== "affiliate" && (
               <div className="space-y-2">
-                <Label htmlFor="fixedAmount">Fixed amount ($)</Label>
+                <Label htmlFor="fixedAmount">Fixed amount (£)</Label>
                 <Input id="fixedAmount" type="number" placeholder="500" value={fixedAmount} onChange={(e) => setFixedAmount(e.target.value)} />
               </div>
             )}
@@ -209,7 +209,7 @@ export default function NewCampaignPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="budget">Budget cap ($)</Label>
+              <Label htmlFor="budget">Budget cap (£)</Label>
               <Input id="budget" type="number" placeholder="5000" value={budgetCap} onChange={(e) => setBudgetCap(e.target.value)} />
             </div>
           </div>

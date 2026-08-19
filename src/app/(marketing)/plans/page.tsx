@@ -25,7 +25,7 @@ const BUSINESS_PLANS: Plan[] = [
   {
     slug: "business_free",
     name: "Free",
-    price: "$0",
+    price: "£0",
     period: "/mo",
     blurb: "Test the marketplace with your first fixed-fee campaigns.",
     features: [
@@ -40,7 +40,7 @@ const BUSINESS_PLANS: Plan[] = [
   {
     slug: "business_growth",
     name: "Growth",
-    price: "$7",
+    price: "£7",
     period: "/mo",
     blurb: "Run more campaigns with affiliate and hybrid payouts.",
     popular: true,
@@ -56,7 +56,7 @@ const BUSINESS_PLANS: Plan[] = [
   {
     slug: "business_enterprise",
     name: "Enterprise",
-    price: "$15",
+    price: "£15",
     period: "/mo",
     blurb: "Scale with unlimited campaigns and a service-level guarantee.",
     features: [
@@ -74,7 +74,7 @@ const CREATOR_PLANS: Plan[] = [
   {
     slug: "creator_free",
     name: "Free",
-    price: "$0",
+    price: "£0",
     period: "/mo",
     blurb: "Get discovered and apply to your first campaigns.",
     features: [
@@ -89,7 +89,7 @@ const CREATOR_PLANS: Plan[] = [
   {
     slug: "creator_pro",
     name: "Pro",
-    price: "$5",
+    price: "£5",
     period: "/mo",
     blurb: "Stand out and get paid faster.",
     popular: true,
@@ -105,7 +105,7 @@ const CREATOR_PLANS: Plan[] = [
   {
     slug: "creator_premium",
     name: "Premium",
-    price: "$10",
+    price: "£10",
     period: "/mo",
     blurb: "The full toolkit for established creators.",
     features: [

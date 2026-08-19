@@ -37,14 +37,14 @@ export async function generateInvoicePdf(input: InvoicePdfInput): Promise<Uint8A
   page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 1, color: rgb(0.85, 0.85, 0.85) });
   y -= 30;
 
-  page.drawText("Total released (USD)", { x: 50, y, size: 12, font: bold, color: muted });
+  page.drawText("Total released (GBP)", { x: 50, y, size: 12, font: bold, color: muted });
   y -= 22;
-  page.drawText(`$${Number(input.totalReleased).toFixed(2)}`, { x: 50, y, size: 26, font: bold, color: ink });
+  page.drawText(`£${Number(input.totalReleased).toFixed(2)}`, { x: 50, y, size: 26, font: bold, color: ink });
   y -= 50;
 
   page.drawText(
     "This statement summarizes creator earnings released during the period. " +
-      "Payouts are subject to Adswish's 10% platform fee and the $25 minimum payout threshold.",
+      "Payouts are subject to Adswish's 10% platform fee and the £25 minimum payout threshold.",
     { x: 50, y, size: 9, font, color: muted, maxWidth: 495, lineHeight: 13 },
   );
 

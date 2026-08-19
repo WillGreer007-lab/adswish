@@ -30,10 +30,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Gather every guard input, then delegate the decision to the pure engine.
-  const [creatorProfile, campaign, creatorSub] = await Promise.all([
+  const [creatorProfile, campaign, creatorSub, creatorSocial] = await Promise.all([
     supabase
       .from("creator_profiles")
-      .select("tier, account_status, strikes")
+      .select("tier, account_status, strikes, stripe_connect_ready")
       .eq("user_id", user.id)
       .single(),
     supabase
@@ -47,11 +47,35 @@ export async function POST(request: NextRequest) {
       .eq("creator_id", user.id)
       .eq("status", "active")
       .single(),
+    supabase
+      .from("creator_social_accounts")
+      .select("platform, follower_count, verified_at, disconnected_at")
+      .eq("creator_id", user.id),
   ]);
 
   const { TIER_LIMITS } = await import("@/lib/tier");
   const tier = (creatorProfile?.data?.tier as "micro" | "mid" | "macro") ?? "micro";
   const tierConfig = TIER_LIMITS[tier];
+
+  // Blueprint §5 requires both payout readiness and at least one verified
+  // platform account before an application can reach a business. The onboarding
+  // screens may be skipped, so this guard must live on the server as well.
+  if (!creatorProfile?.data?.stripe_connect_ready) {
+    return NextResponse.json(
+      { error: "Connect Stripe before applying to campaigns so approved earnings have a payout destination." },
+      { status: 422 },
+    );
+  }
+
+  const hasVerifiedSocial = (creatorSocial?.data ?? []).some(
+    (account) => Boolean(account.verified_at) && !account.disconnected_at && Number(account.follower_count ?? 0) >= 1000,
+  );
+  if (!hasVerifiedSocial) {
+    return NextResponse.json(
+      { error: "Verify at least one TikTok, Instagram, or YouTube account with 1,000+ followers before applying." },
+      { status: 422 },
+    );
+  }
 
   const isFree = !creatorSub?.data || creatorSub.data.plan_slug === "creator_free";
   const applyLimit = isFree ? 20 : 50;
@@ -71,9 +95,10 @@ export async function POST(request: NextRequest) {
       .single(),
     supabase
       .from("applications")
-      .select("id")
+      .select("id, campaigns!inner(status)")
       .eq("creator_id", user.id)
-      .eq("status", "accepted"),
+      .eq("status", "accepted")
+      .in("campaigns.status", ["active", "paused"]),
   ]);
 
   const decision = evaluateApply({

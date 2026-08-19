@@ -19,8 +19,8 @@ export function AdminUserActions({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(action: "suspend" | "activate" | "ban") {
-    const label = action === "suspend" ? "suspend" : action === "ban" ? "ban" : "reactivate";
+  async function run(action: "suspend" | "activate" | "ban" | "strike") {
+    const label = action === "suspend" ? "suspend" : action === "ban" ? "ban" : action === "strike" ? "add a strike to" : "reactivate";
     if (!window.confirm(`Are you sure you want to ${label} this ${role} account?`)) return;
     setLoading(true);
     setError(null);
@@ -54,6 +54,9 @@ export function AdminUserActions({
           <button type="button" onClick={() => run("ban")} className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10">
             Ban
           </button>
+          <button type="button" onClick={() => run("strike")} className="rounded border border-warning/40 px-2 py-1 text-xs font-medium text-warning hover:bg-warning/10">
+            Strike
+          </button>
         </>
       ) : status === "suspended" ? (
         <>
@@ -62,6 +65,9 @@ export function AdminUserActions({
           </button>
           <button type="button" onClick={() => run("ban")} className="rounded border border-destructive/40 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10">
             Ban
+          </button>
+          <button type="button" onClick={() => run("strike")} className="rounded border border-warning/40 px-2 py-1 text-xs font-medium text-warning hover:bg-warning/10">
+            Strike
           </button>
         </>
       ) : (

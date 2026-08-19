@@ -5,6 +5,7 @@ import {
   checkSubscriptionDunning,
   checkCampaignCompletion,
   checkPixelPenalty,
+  aggregateDailyRollups,
 } from "@/lib/background-jobs";
 import {
   releaseExpiredHolds,
@@ -24,7 +25,8 @@ type JobName =
   | "charge-retries"
   | "weekly-payouts"
   | "monthly-invoices"
-  | "token-refresh";
+  | "token-refresh"
+  | "daily-rollup";
 
 const ALL_JOBS: JobName[] = [
   "deadlines",
@@ -65,6 +67,8 @@ async function run(job: JobName): Promise<unknown> {
     case "token-refresh":
       await refreshExpiredTokens();
       return "refreshed";
+    case "daily-rollup":
+      return `upserted:${await aggregateDailyRollups()}`;
   }
 }
 

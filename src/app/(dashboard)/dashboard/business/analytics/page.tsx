@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
+import { formatCurrency } from "@/lib/utils";
 import { AnalyticsCharts, type DailyPoint } from "@/components/dashboard/analytics-charts";
 import { MousePointerClick, ShoppingCart, TrendingUp, CreditCard, BarChart3 } from "lucide-react";
 
-const money = (n: number) => `£${n.toFixed(2)}`;
+const money = (n: number) => formatCurrency(n);
 
 type RollupRow = {
   date: string;

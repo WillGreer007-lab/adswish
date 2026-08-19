@@ -9,50 +9,57 @@ type PlanMeta = {
   price: string;
   cents: number;
   maxCampaigns: number | null; // null = unlimited
+  limitLabel: string;
   features: string[];
 };
 
 const PLANS: Record<string, PlanMeta> = {
   business_free: {
     name: "Free",
-    price: "$0",
+    price: "£0",
     cents: 0,
     maxCampaigns: 3,
+    limitLabel: "campaigns / month",
     features: ["3 active campaigns / month", "Fixed-fee campaigns", "Basic pixel + extension tracking", "7-day payout holds"],
   },
   business_growth: {
     name: "Growth",
-    price: "$7/mo",
+    price: "£7/mo",
     cents: 700,
     maxCampaigns: 20,
+    limitLabel: "campaigns / month",
     features: ["20 active campaigns / month", "Affiliate + hybrid campaigns", "Advanced tracking analytics", "2 team seats", "Priority support"],
   },
   business_enterprise: {
     name: "Enterprise",
-    price: "$15/mo",
+    price: "£15/mo",
     cents: 1500,
     maxCampaigns: null,
+    limitLabel: "campaigns / month",
     features: ["Unlimited campaigns", "Everything in Growth", "5 team seats", "4-hour SLA response", "Custom reporting"],
   },
   creator_free: {
     name: "Free",
-    price: "$0",
+    price: "£0",
     cents: 0,
     maxCampaigns: 2,
+    limitLabel: "active campaigns",
     features: ["Up to 2 active campaigns", "5 saved filter presets", "7-day payout hold", "Basic profile + socials"],
   },
   creator_pro: {
     name: "Pro",
-    price: "$5/mo",
+    price: "£5/mo",
     cents: 500,
     maxCampaigns: 10,
+    limitLabel: "active campaigns",
     features: ["Up to 10 active campaigns", "Priority applicant badge", "Unlimited saved filters", "Instant payout (skip hold)"],
   },
   creator_premium: {
     name: "Premium",
-    price: "$10/mo",
+    price: "£10/mo",
     cents: 1000,
     maxCampaigns: null,
+    limitLabel: "active campaigns",
     features: ["Unlimited active campaigns", '"Verified Pro" badge', "Campaign performance insights", "Dedicated support"],
   },
 };
@@ -105,16 +112,24 @@ export async function PlanDashboard({ role, userId }: { role: "business" | "crea
     const thisMonth = new Date().toISOString().slice(0, 7);
     used = profile?.campaigns_created_month === thisMonth ? (profile.campaigns_created_this_month ?? 0) : 0;
   } else {
-    const [profileRes, countRes] = await Promise.all([
+    const [profileRes, acceptedRes] = await Promise.all([
       supabase.from("creator_profiles").select("tier").eq("user_id", userId).single(),
       supabase
         .from("applications")
-        .select("id", { count: "exact", head: true })
+        .select("campaign_id")
         .eq("creator_id", userId)
         .eq("status", "accepted"),
     ]);
     creatorTier = (profileRes.data?.tier as "micro" | "mid" | "macro") ?? null;
-    used = countRes.count ?? 0;
+    const acceptedCampaignIds = [...new Set((acceptedRes.data ?? []).map((row) => row.campaign_id))];
+    if (acceptedCampaignIds.length) {
+      const { data: activeCampaigns } = await supabase
+        .from("campaigns")
+        .select("id")
+        .in("id", acceptedCampaignIds)
+        .in("status", ["active", "paused"]);
+      used = activeCampaigns?.length ?? 0;
+    }
   }
 
   // Creator limits: the effective cap is min(plan cap, tier cap).
@@ -156,7 +171,7 @@ export async function PlanDashboard({ role, userId }: { role: "business" | "crea
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Usage</p>
               <p className="text-sm font-medium">
-                {used} / {Number.isFinite(effectiveCap) ? effectiveCap : "Unlimited"} campaigns
+                {used} / {Number.isFinite(effectiveCap) ? effectiveCap : "Unlimited"} {plan.limitLabel}
               </p>
             </div>
           </div>
@@ -173,8 +188,8 @@ export async function PlanDashboard({ role, userId }: { role: "business" | "crea
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
               {effectiveCap - used > 0
-                ? `${effectiveCap - used} campaign${effectiveCap - used === 1 ? "" : "s"} left this period`
-                : "You've reached your limit — upgrade to run more"}
+                ? `${effectiveCap - used} ${plan.limitLabel} left this period`
+                : `You've reached your ${plan.limitLabel} limit — upgrade to run more`}
             </p>
           </div>
         )}
@@ -243,7 +258,7 @@ export async function PlanDashboard({ role, userId }: { role: "business" | "crea
                 </div>
                 <p className="mt-1 font-mono text-lg font-bold">{meta.price}</p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {meta.maxCampaigns === null ? "Unlimited campaigns" : `${meta.maxCampaigns} campaigns / month`}
+                  {meta.maxCampaigns === null ? `Unlimited ${meta.limitLabel}` : `${meta.maxCampaigns} ${meta.limitLabel}`}
                 </p>
                 <ul className="mt-3 flex-1 space-y-1.5">
                   {meta.features.slice(0, 3).map((f) => (

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { Bell, Radar, CreditCard, ArrowRight } from "lucide-react";
+import { Bell, Radar, CreditCard, Download, ArrowRight } from "lucide-react";
 import { AppearanceSettings } from "@/components/dashboard/appearance-settings";
 
 export const metadata = { title: "Settings — Adswish" };
@@ -26,6 +26,13 @@ const cards = [
     icon: CreditCard,
     title: "Payouts",
     desc: "Connect Stripe for payouts and view your payout status.",
+  },
+  {
+    href: "/api/internal/data-export",
+    icon: Download,
+    title: "Download my data",
+    desc: "Export your profile, campaigns, messages, reviews, and financial history as JSON.",
+    download: true,
   },
 ];
 
@@ -73,29 +80,33 @@ export default async function SettingsPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((card) => (
-            <Link
-              key={card.href}
-              href={card.href}
-              className="group rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <card.icon className="h-5 w-5 text-primary" />
+          {visible.map((card) => {
+            const content = (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <card.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  {card.badge && (
+                    <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                      {card.badge}
+                    </span>
+                  )}
                 </div>
-                {card.badge && (
-                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    {card.badge}
-                  </span>
-                )}
-              </div>
-              <h2 className="mt-4 font-heading text-base font-semibold">{card.title}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{card.desc}</p>
-              <span className="mt-3 inline-flex items-center text-sm font-medium text-primary">
-                Open <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </Link>
-          ))}
+                <h2 className="mt-4 font-heading text-base font-semibold">{card.title}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{card.desc}</p>
+                <span className="mt-3 inline-flex items-center text-sm font-medium text-primary">
+                  {card.download ? "Download" : "Open"} <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </>
+            );
+            const className = "group rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/50";
+            return card.download ? (
+              <a key={card.href} href={card.href} download className={className}>{content}</a>
+            ) : (
+              <Link key={card.href} href={card.href} className={className}>{content}</Link>
+            );
+          })}
         </div>
       </div>
     </DashboardShell>

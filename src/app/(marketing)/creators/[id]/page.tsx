@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Star, Users, Video, Youtube, Instagram, Music2, ShieldCheck } from "lucide-react";
@@ -103,6 +103,20 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
     .order("created_at", { ascending: false })
     .limit(10);
 
+  // Approved portfolio videos are public profile content. Read them through
+  // the service role because deliverables themselves are intentionally not
+  // public under RLS; only completed, business-approved videos are exposed.
+  const service = createSupabaseServiceRoleClient();
+  const { data: portfolio } = await service
+    .from("deliverables")
+    .select("id, video_url, campaign_id, campaigns(title)")
+    .eq("creator_id", id)
+    .eq("business_approved", true)
+    .not("video_url", "is", null)
+    .is("deleted_at", null)
+    .order("approved_at", { ascending: false })
+    .limit(12);
+
   const planSlug = subscription?.plan_slug || "creator_free";
   const tier = tierConfig[profile.tier as Tier] ?? tierConfig.micro;
   const plan = planConfig[planSlug] || planConfig.creator_free;
@@ -190,12 +204,28 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
       {/* Portfolio */}
       <div className="mt-6">
         <h2 className="mb-2 text-sm font-semibold">Portfolio</h2>
-        <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30">
-          <div className="text-center">
-            <Video className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No portfolio videos yet</p>
+        {portfolio && portfolio.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {portfolio.map((item: any) => {
+              const campaign = Array.isArray(item.campaigns) ? item.campaigns[0] : item.campaigns;
+              return (
+                <Card key={item.id}>
+                  <CardContent className="p-3">
+                    <video controls preload="metadata" src={item.video_url} className="aspect-video w-full rounded-md bg-muted object-cover" />
+                    <p className="mt-2 truncate text-sm font-medium">{campaign?.title || "Adswish campaign"}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-border bg-muted/30">
+            <div className="text-center">
+              <Video className="mx-auto mb-2 h-6 w-6 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No approved portfolio videos yet</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reviews */}

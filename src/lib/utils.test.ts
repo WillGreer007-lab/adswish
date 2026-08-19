@@ -7,16 +7,16 @@ import {
 } from "@/lib/utils";
 
 describe("formatCurrency", () => {
-  it("formats USD correctly", () => {
-    expect(formatCurrency(1234.56)).toBe("$1,234.56");
+  it("formats the platform currency correctly", () => {
+    expect(formatCurrency(1234.56)).toBe("£1,234.56");
   });
 
   it("formats zero", () => {
-    expect(formatCurrency(0)).toBe("$0.00");
+    expect(formatCurrency(0)).toBe("£0.00");
   });
 
   it("handles large numbers", () => {
-    expect(formatCurrency(1000000)).toBe("$1,000,000.00");
+    expect(formatCurrency(1000000)).toBe("£1,000,000.00");
   });
 });
 

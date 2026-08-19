@@ -1,5 +1,6 @@
 import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SlaActions } from "@/components/admin/sla-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function AdminSlaPage() {
       <div>
         <h1 className="font-heading text-2xl font-bold text-background">SLA Command Center</h1>
         <p className="text-sm text-background/60">
-          Open disputes, holds about to release, and recent resolutions. Read-only.
+          Open disputes, holds about to release, and recent resolutions. Financial actions require explicit confirmation and are audit logged.
         </p>
       </div>
 
@@ -49,7 +50,8 @@ export default async function AdminSlaPage() {
                     <th className="py-2 pr-4">Raised by</th>
                     <th className="py-2 pr-4">Reason</th>
                     <th className="py-2 pr-4">Status</th>
-                    <th className="py-2">Opened</th>
+                    <th className="py-2 pr-4">Opened</th>
+                    <th className="py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -58,7 +60,8 @@ export default async function AdminSlaPage() {
                       <td className="py-3 pr-4 font-mono text-xs text-background/80">{d.raised_by?.slice(0, 8)}…</td>
                       <td className="py-3 pr-4 text-background">{d.reason}</td>
                       <td className="py-3 pr-4 text-warning">{d.status}</td>
-                      <td className="py-3 text-background/60">{new Date(d.opened_at).toLocaleString()}</td>
+                      <td className="py-3 pr-4 text-background/60">{new Date(d.opened_at).toLocaleString()}</td>
+                      <td className="py-3"><SlaActions disputeId={d.id} canSettle={Boolean(d.related_conversion_id)} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -92,8 +95,8 @@ export default async function AdminSlaPage() {
                   {holds.map((h: any) => (
                     <tr key={h.id} className="border-b border-background/5">
                       <td className="py-3 pr-4 font-mono text-xs text-background/80">{h.order_id}</td>
-                      <td className="py-3 pr-4 text-background">${Number(h.order_amount).toFixed(2)}</td>
-                      <td className="py-3 pr-4 text-success">${Number(h.creator_cut).toFixed(2)}</td>
+                      <td className="py-3 pr-4 text-background">£{Number(h.order_amount).toFixed(2)}</td>
+                      <td className="py-3 pr-4 text-success">£{Number(h.creator_cut).toFixed(2)}</td>
                       <td className="py-3 text-background/60">{new Date(h.hold_expires_at).toLocaleString()}</td>
                     </tr>
                   ))}

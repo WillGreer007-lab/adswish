@@ -11,7 +11,7 @@ const PROFILE_TABLES = {
 } as const;
 
 type TargetRole = keyof typeof PROFILE_TABLES;
-type Action = "suspend" | "activate" | "ban";
+type Action = "suspend" | "activate" | "ban" | "strike";
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   const role = body.role as TargetRole;
   const action = body.action as Action;
 
-  if (!userId || !(role in PROFILE_TABLES) || !["suspend", "activate", "ban"].includes(action)) {
+  if (!userId || !(role in PROFILE_TABLES) || !["suspend", "activate", "ban", "strike"].includes(action)) {
     return NextResponse.json({ error: "user_id, role, and a valid action are required" }, { status: 400 });
   }
   if (userId === admin.id) {
@@ -41,12 +41,39 @@ export async function POST(request: NextRequest) {
   const nextStatus = action === "suspend" ? "suspended" : action === "ban" ? "banned" : "active";
   const { data: target, error: targetError } = await service
     .from(table)
-    .select("user_id, account_status")
+    .select("user_id, account_status, strikes")
     .eq("user_id", userId)
     .maybeSingle();
 
   if (targetError) return NextResponse.json({ error: targetError.message }, { status: 500 });
   if (!target) return NextResponse.json({ error: "Profile not found" }, { status: 404 });
+
+  if (action === "strike") {
+    const nextStrikes = Number(target.strikes ?? 0) + 1;
+    const nextStatus = nextStrikes >= 3 ? "banned" : target.account_status === "banned" ? "banned" : "active";
+    const { error: strikeError } = await service
+      .from(table)
+      .update({ strikes: nextStrikes, account_status: nextStatus })
+      .eq("user_id", userId);
+
+    if (strikeError) return NextResponse.json({ error: strikeError.message }, { status: 500 });
+
+    await logAdminAction({
+      adminId: admin.id,
+      actionType: "manual_strike",
+      targetEntityId: userId,
+      metadata: { role, previous_strikes: target.strikes ?? 0, next_strikes: nextStrikes, next_status: nextStatus },
+    });
+    await service.from("notifications").insert({
+      user_id: userId,
+      type: "system",
+      body: nextStrikes >= 3
+        ? "A third strike was added to your account, which has been banned under the Adswish strike policy."
+        : `An administrator added a strike to your account (${nextStrikes}/3).`,
+      link: "/account-suspended",
+    });
+    return NextResponse.json({ ok: true, status: nextStatus, strikes: nextStrikes });
+  }
 
   const { error: updateError } = await service
     .from(table)

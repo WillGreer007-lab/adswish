@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const dynamic = "force-dynamic";
 
 const BURST_THRESHOLD = 10;
-const HIGH_VALUE_DOLLARS = 1000;
+const HIGH_VALUE_POUNDS = 1000;
 
 export default async function AdminFraudPage() {
   const supabase = createSupabaseServiceRoleClient();
@@ -18,7 +18,7 @@ export default async function AdminFraudPage() {
     supabase
       .from("conversions")
       .select("id, order_id, order_amount, tracking_link_id, created_at")
-      .gte("order_amount", HIGH_VALUE_DOLLARS)
+      .gte("order_amount", HIGH_VALUE_POUNDS)
       .order("order_amount", { ascending: false })
       .limit(50),
     supabase
@@ -84,7 +84,7 @@ export default async function AdminFraudPage() {
       <Card className="bg-surface/5 border-background/10">
         <CardHeader>
           <CardTitle className="text-background">
-            High-value conversions (≥ ${HIGH_VALUE_DOLLARS}) ({big?.length || 0})
+            High-value conversions (≥ £${HIGH_VALUE_POUNDS}) ({big?.length || 0})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -103,7 +103,7 @@ export default async function AdminFraudPage() {
                   {big.map((c: any) => (
                     <tr key={c.id} className="border-b border-background/5">
                       <td className="py-3 pr-4 font-mono text-xs text-background/80">{c.order_id}</td>
-                      <td className="py-3 pr-4 text-background">${Number(c.order_amount).toFixed(2)}</td>
+                      <td className="py-3 pr-4 text-background">£{Number(c.order_amount).toFixed(2)}</td>
                       <td className="py-3 pr-4 font-mono text-xs text-background/80">
                         {c.tracking_link_id?.slice(0, 8)}…
                       </td>

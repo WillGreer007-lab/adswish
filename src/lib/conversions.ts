@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyTrackingJwt } from "@/lib/tracking";
 import { calculateCreatorCut, calculatePlatformFee, escrowHoldExpiresAt } from "@/lib/payout-math";
+import { getStripeCurrency } from "@/lib/stripe/client";
 
 export type AttributionMethod = "cookie" | "s2s" | "utm_fallback" | "manual";
 
@@ -83,7 +84,7 @@ export async function recordConversion(
       tracking_link_id: claims.linkId,
       order_id: input.orderId,
       order_amount: amount,
-      currency: input.currency || "USD",
+      currency: input.currency || getStripeCurrency().toUpperCase(),
       creator_cut: creatorCut,
       platform_cut: platformCut,
       status: "pending_hold",
@@ -103,7 +104,7 @@ export async function recordConversion(
     related_conversion_id: conversion.id,
     type: "hold",
     amount: creatorCut,
-    currency: input.currency || "USD",
+    currency: input.currency || getStripeCurrency().toUpperCase(),
   });
 
   return { ok: true, status: 200, conversionId: conversion.id };

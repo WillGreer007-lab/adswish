@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
+import { formatCurrency } from "@/lib/utils";
 import { Wallet, CreditCard, PiggyBank, ArrowLeftRight } from "lucide-react";
 import { BalanceWidget } from "@/components/dashboard/balance-widget";
 
@@ -10,6 +11,8 @@ type LedgerRow = {
   amount: number;
   created_at: string;
 };
+
+const money = (n: number) => formatCurrency(n);
 
 const ledgerLabels: Record<string, { label: string; cls: string }> = {
   hold: { label: "Escrow hold", cls: "text-warning" },
@@ -63,7 +66,7 @@ export default async function BusinessPaymentsPage() {
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <PiggyBank className="h-4 w-4" /> In escrow
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-warning">${held.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-warning">{money(held)}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Released to creators when deliverables are approved.
             </p>
@@ -72,13 +75,13 @@ export default async function BusinessPaymentsPage() {
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <Wallet className="h-4 w-4" /> Paid to creators
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-success">${paid.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-success">{money(paid)}</p>
           </div>
           <div className="rounded-lg border border-border bg-surface p-5">
             <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
               <ArrowLeftRight className="h-4 w-4" /> Fees
             </div>
-            <p className="mt-2 font-mono text-2xl font-bold text-primary">${fees.toFixed(2)}</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-primary">{money(fees)}</p>
           </div>
         </div>
 
@@ -123,7 +126,7 @@ export default async function BusinessPaymentsPage() {
                       </p>
                     </div>
                     <p className="font-mono text-sm font-semibold">
-                      ${Math.abs(Number(l.amount)).toFixed(2)}
+                      {money(Math.abs(Number(l.amount)))}
                     </p>
                   </div>
                 );

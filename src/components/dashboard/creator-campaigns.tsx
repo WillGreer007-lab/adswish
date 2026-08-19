@@ -34,6 +34,7 @@ interface DeliverableRow {
   business_approved: boolean;
   status: string;
   moderation_status?: string;
+  video_url?: string | null;
 }
 
 const statusLabel: Record<string, string> = {
@@ -74,6 +75,21 @@ export function CreatorCampaignList({
   for (const d of deliverables) {
     if (!byCampaign.has(d.campaign_id)) byCampaign.set(d.campaign_id, []);
     byCampaign.get(d.campaign_id)!.push(d);
+  }
+
+  async function uploadVideo(id: string, file: File) {
+    setBusy(`upload-${id}`);
+    setError(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/internal/deliverables/${id}/upload`, {
+      method: "POST",
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) setError(data.error || "Video upload failed");
+    else router.refresh();
+    setBusy(null);
   }
 
   async function submitDeliverable(id: string) {
@@ -150,6 +166,13 @@ export function CreatorCampaignList({
                       Due {new Date(d.deadline_date).toLocaleDateString()}
                     </p>
 
+                    {d.video_url && (
+                      <div className="mt-3 overflow-hidden rounded-md border border-border bg-muted/30">
+                        <video controls preload="metadata" src={d.video_url} className="max-h-72 w-full" />
+                        <p className="px-3 py-2 text-xs text-muted-foreground">Uploaded MP4 attached to this deliverable.</p>
+                      </div>
+                    )}
+
                     {d.submitted_url ? (
                       <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
                         <a href={d.submitted_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
@@ -166,20 +189,40 @@ export function CreatorCampaignList({
                       </div>
                     ) : (
                       (d.status === "pending" || d.status === "grace_period") && (
-                        <div className="mt-3 flex gap-2">
-                          <Input
-                            placeholder="Paste your post URL"
-                            value={urls[d.id] || ""}
-                            onChange={(e) => setUrls((prev) => ({ ...prev, [d.id]: e.target.value }))}
-                            className="flex-1"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => submitDeliverable(d.id)}
-                            disabled={busy === d.id || !(urls[d.id] || "").trim()}
-                          >
-                            {busy === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Submit"}
-                          </Button>
+                        <div className="mt-3 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <label htmlFor={`video-${d.id}`} className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-3 py-2 text-xs font-medium hover:border-primary/50">
+                              {busy === `upload-${d.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : "Upload MP4"}
+                              <input
+                                id={`video-${d.id}`}
+                                type="file"
+                                accept="video/mp4,.mp4"
+                                className="sr-only"
+                                disabled={busy !== null}
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  if (file) void uploadVideo(d.id, file);
+                                  event.currentTarget.value = "";
+                                }}
+                              />
+                            </label>
+                            <span className="text-xs text-muted-foreground">Optional, max 50MB. Still paste the published post URL below.</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Paste your post URL"
+                              value={urls[d.id] || ""}
+                              onChange={(e) => setUrls((prev) => ({ ...prev, [d.id]: e.target.value }))}
+                              className="flex-1"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => submitDeliverable(d.id)}
+                              disabled={busy !== null || !(urls[d.id] || "").trim()}
+                            >
+                              {busy === d.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Submit"}
+                            </Button>
+                          </div>
                         </div>
                       )
                     )}

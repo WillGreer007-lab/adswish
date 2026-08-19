@@ -337,6 +337,107 @@ export async function checkPixelPenalty(now: Date = new Date()) {
   }
 }
 
+/**
+ * Materialize the previous UTC day's clicks and conversions for the analytics
+ * dashboards. The job is intentionally idempotent: rerunning the same day
+ * replaces the rollup row rather than double-counting it.
+ */
+export async function aggregateDailyRollups(day: Date = new Date(Date.now() - 24 * 60 * 60 * 1000)): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+  const start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate()));
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  const date = start.toISOString().slice(0, 10);
+
+  type ClickRow = { tracking_link_id: string };
+  type ConversionRollupRow = {
+    tracking_link_id: string;
+    order_amount: number | string | null;
+    creator_cut: number | string | null;
+    platform_cut: number | string | null;
+  };
+  type LinkRow = { id: string; campaign_id: string; creator_id: string };
+
+  const [{ data: clicks }, { data: conversions }] = await Promise.all([
+    supabase
+      .from("clicks_log")
+      .select("tracking_link_id")
+      .gte("clicked_at", start.toISOString())
+      .lt("clicked_at", end.toISOString()),
+    supabase
+      .from("conversions")
+      .select("tracking_link_id, order_amount, creator_cut, platform_cut")
+      .gte("created_at", start.toISOString())
+      .lt("created_at", end.toISOString()),
+  ]);
+
+  const clickRows = (clicks ?? []) as ClickRow[];
+  const conversionRows = (conversions ?? []) as ConversionRollupRow[];
+  const linkIds = [
+    ...new Set([
+      ...clickRows.map((row) => row.tracking_link_id),
+      ...conversionRows.map((row) => row.tracking_link_id),
+    ]),
+  ];
+  const { data: links } = linkIds.length
+    ? await supabase.from("tracking_links").select("id, campaign_id, creator_id").in("id", linkIds)
+    : { data: [] };
+  const linkRows = (links ?? []) as LinkRow[];
+  const linkMap = new Map(linkRows.map((link) => [link.id, link]));
+
+  const totals = new Map<string, {
+    campaign_id: string;
+    creator_id: string;
+    total_clicks: number;
+    total_conversions: number;
+    gross_sales: number;
+    creator_cut: number;
+    platform_cut: number;
+  }>();
+
+  function bucket(linkId: string) {
+    const link = linkMap.get(linkId);
+    if (!link) return null;
+    const key = `${link.campaign_id}:${link.creator_id}`;
+    const current = totals.get(key) ?? {
+      campaign_id: link.campaign_id,
+      creator_id: link.creator_id,
+      total_clicks: 0,
+      total_conversions: 0,
+      gross_sales: 0,
+      creator_cut: 0,
+      platform_cut: 0,
+    };
+    totals.set(key, current);
+    return current;
+  }
+
+  for (const click of clickRows) {
+    const current = bucket(click.tracking_link_id);
+    if (current) current.total_clicks += 1;
+  }
+
+  for (const conversion of conversionRows) {
+    const current = bucket(conversion.tracking_link_id);
+    if (!current) continue;
+    current.total_conversions += 1;
+    current.gross_sales += Number(conversion.order_amount ?? 0);
+    current.creator_cut += Number(conversion.creator_cut ?? 0);
+    current.platform_cut += Number(conversion.platform_cut ?? 0);
+  }
+
+  const rows = [...totals.values()].map((row) => ({ ...row, date }));
+  if (!rows.length) return 0;
+
+  const { error } = await supabase
+    .from("daily_conversion_rollups")
+    .upsert(rows, { onConflict: "campaign_id,creator_id,date" });
+  if (error) {
+    logger.error({ error: error.message, date }, "Failed to write daily analytics rollups");
+    throw error;
+  }
+  return rows.length;
+}
+
 export async function checkCampaignCompletion() {
   const supabase = createSupabaseServiceRoleClient();
 

@@ -18,6 +18,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 interface CampaignRow {
   id: string;
@@ -179,7 +180,7 @@ export function CampaignDetail({
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{campaign.description}</p>
               )}
               <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                {campaign.fixed_amount != null && <span>${campaign.fixed_amount} fixed</span>}
+                {campaign.fixed_amount != null && <span>{formatCurrency(Number(campaign.fixed_amount))} fixed</span>}
                 {campaign.commission_pct != null && <span>{campaign.commission_pct}% commission</span>}
                 {campaign.attribution_days != null && (
                   <span>{campaign.attribution_days}-day attribution</span>
@@ -243,7 +244,7 @@ export function CampaignDetail({
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>Budget</span>
                 <span className="font-mono">
-                  ${campaign.total_spent.toFixed(2)} / ${campaign.budget_cap.toFixed(2)}
+                  {formatCurrency(Number(campaign.total_spent))} / {formatCurrency(Number(campaign.budget_cap))}
                 </span>
               </div>
               <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">

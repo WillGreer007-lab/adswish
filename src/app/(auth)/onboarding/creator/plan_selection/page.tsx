@@ -12,7 +12,7 @@ const PLANS = [
   {
     slug: "creator_free",
     name: "Free",
-    price: "$0",
+    price: "£0",
     period: "/mo",
     features: [
       "Apply to campaigns",
@@ -25,7 +25,7 @@ const PLANS = [
   {
     slug: "creator_pro",
     name: "Pro",
-    price: "$5",
+    price: "£5",
     period: "/mo",
     features: [
       "Everything in Free",
@@ -39,7 +39,7 @@ const PLANS = [
   {
     slug: "creator_premium",
     name: "Premium",
-    price: "$10",
+    price: "£10",
     period: "/mo",
     features: [
       "Everything in Pro",

@@ -12,7 +12,7 @@ const PLANS = [
   {
     slug: "business_free",
     name: "Free",
-    price: "$0",
+    price: "£0",
     period: "/mo",
     features: [
       "Up to 3 campaigns/month",
@@ -25,7 +25,7 @@ const PLANS = [
   {
     slug: "business_growth",
     name: "Growth",
-    price: "$7",
+    price: "£7",
     period: "/mo",
     features: [
       "Unlimited campaigns",
@@ -39,7 +39,7 @@ const PLANS = [
   {
     slug: "business_enterprise",
     name: "Enterprise",
-    price: "$15",
+    price: "£15",
     period: "/mo",
     features: [
       "SLA guarantee (4hr response)",

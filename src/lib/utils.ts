@@ -5,8 +5,21 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number, currency: string = "USD"): string {
-  return new Intl.NumberFormat("en-US", {
+/**
+ * Currency used by the live platform. The server may override it with
+ * STRIPE_CURRENCY; the public client fallback is GBP because the platform
+ * account settles in GBP.
+ */
+export function getAppCurrency(): string {
+  return (
+    process.env.NEXT_PUBLIC_STRIPE_CURRENCY ??
+    process.env.STRIPE_CURRENCY ??
+    "gbp"
+  ).toUpperCase();
+}
+
+export function formatCurrency(amount: number, currency: string = getAppCurrency()): string {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

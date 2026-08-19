@@ -607,24 +607,33 @@ export async function processWeeklyPayouts(): Promise<number> {
       .eq("user_id", creatorId)
       .single();
 
-    if (!profile || !shouldPayout(entry.total, profile.tax_form_status)) {
-      logger.info({ creatorId, total: entry.total }, "Creator skipped: below $25 or tax form not approved");
+    if (
+      !profile ||
+      !shouldPayout(entry.total, profile.tax_form_status) ||
+      !profile.stripe_account_id ||
+      !profile.stripe_connect_ready
+    ) {
+      logger.info(
+        { creatorId, total: entry.total },
+        "Creator skipped: below minimum, tax form not approved, or Connect not ready",
+      );
       continue;
     }
 
     let transferId: string | null = null;
-    if (profile.stripe_account_id && profile.stripe_connect_ready) {
-      try {
-        const stripe = getStripeClient();
-        const transfer = await stripe.transfers.create({
-          amount: Math.round(entry.total * 100),
-          currency: getStripeCurrency(),
-          destination: profile.stripe_account_id,
-        });
-        transferId = transfer.id;
-      } catch (err) {
-        logger.warn({ creatorId, err: String(err) }, "Payout transfer failed; recorded as pending");
-      }
+    try {
+      const stripe = getStripeClient();
+      const transfer = await stripe.transfers.create({
+        amount: Math.round(entry.total * 100),
+        currency: getStripeCurrency(),
+        destination: profile.stripe_account_id,
+      });
+      transferId = transfer.id;
+    } catch (err) {
+      // Do not mark conversions as paid or create an invoice when Stripe did
+      // not create the transfer. The next weekly run can retry safely.
+      logger.warn({ creatorId, err: String(err) }, "Payout transfer failed; leaving earnings pending");
+      continue;
     }
 
     const { data: invoice } = await supabase
@@ -634,7 +643,7 @@ export async function processWeeklyPayouts(): Promise<number> {
         month_start: weekStart.toISOString().slice(0, 10),
         month_end: weekEnd.toISOString().slice(0, 10),
         total_released: entry.total,
-        sent_at: transferId ? new Date().toISOString() : null,
+        sent_at: new Date().toISOString(),
       })
       .select("id")
       .single();
@@ -676,8 +685,6 @@ export async function generateMonthlyInvoices(): Promise<number> {
   let generated = 0;
   const monthStartStr = monthStart.toISOString().slice(0, 10);
   const monthEndStr = monthEnd.toISOString().slice(0, 10);
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-
   for (const [creatorId, total] of totals.entries()) {
     let pdfUrl: string | null = null;
 
@@ -700,8 +707,10 @@ export async function generateMonthlyInvoices(): Promise<number> {
         .from("payout-invoices")
         .upload(path, pdfBytes, { contentType: "application/pdf", upsert: true });
 
-      if (!uploadErr && supabaseUrl) {
-        pdfUrl = `${supabaseUrl}/storage/v1/object/public/payout-invoices/${path}`;
+      if (!uploadErr) {
+        // Store the private bucket path. The download route turns it into a
+        // short-lived signed URL for the owning creator.
+        pdfUrl = path;
       } else if (uploadErr) {
         logger.warn({ creatorId, err: uploadErr.message }, "Invoice PDF upload failed");
       }

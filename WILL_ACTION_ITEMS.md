@@ -1,5 +1,7 @@
 # Adswish — Master checklist (what you need to do)
 
+> **Current status (19 Aug 2026):** This checklist contains historical action notes. For the authoritative audit, implemented fixes, remaining code gaps, and current owner-only steps, read `BLUEPRINT_GAP_AUDIT.md` and the latest section of `GLM52_HANDOFF.md`. Migrations 031–034 are applied; the code is not considered launch-complete until the owner-only checklist is finished.
+
 Updated Aug 19. **"Done for you"** = already built + verified in code and DB.
 **"Only you"** = requires an external account only you control.
 

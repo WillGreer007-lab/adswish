@@ -26,7 +26,7 @@ export default async function BusinessProfilePage({
 
   const { data: team } = await supabase
     .from("business_team_members")
-    .select("id, email, role")
+    .select("business_id, user_id, role, invited_at, joined_at")
     .eq("business_id", user.id);
 
   const { data: subscription } = await supabase
@@ -103,8 +103,11 @@ export default async function BusinessProfilePage({
           ) : (
             <div className="mt-2 space-y-2">
               {team.map((m) => (
-                <div key={m.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <span className="text-sm font-medium">{m.email}</span>
+                <div key={m.user_id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="font-mono text-xs font-medium">{m.user_id}</p>
+                    <p className="text-xs text-muted-foreground">Invited {new Date(m.invited_at).toLocaleDateString()}</p>
+                  </div>
                   <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
                     {m.role}
                   </span>

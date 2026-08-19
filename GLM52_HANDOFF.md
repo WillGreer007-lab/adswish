@@ -1147,3 +1147,18 @@ The only remaining runtime step is the creator completing hosted onboarding (Str
 - **Admin workflow:** `/admin/manual-verifications` shows signed screenshot previews and approve/reject controls. Approval updates the verified social account, recalculates the highest verified creator tier, writes an audit log, and notifies the creator.
 - **Account administration:** `/admin/users` now supports suspend, reactivate, ban, and unban actions for creators and businesses. Actions are audit logged and notify the target. Middleware blocks suspended/banned dashboard, onboarding, and internal API access and routes users to `/account-suspended`; admins can still restore accounts.
 - **Verification before publish:** typecheck clean · lint 0 errors (6 pre-existing warnings) · 162/162 tests · build passes.
+
+## Batch: master blueprint audit and safety fixes (Aug 19)
+
+- Added `BLUEPRINT_GAP_AUDIT.md`, mapping the v4 blueprint to implemented routes, migrations, jobs, owner-only setup, deliberate GBP/pg_cron/in-house telemetry deviations, and remaining launch gaps.
+- Added server-side application gates: a creator cannot apply without Stripe Connect readiness and one verified 1,000+ follower social account; onboarding skip buttons no longer bypass the real requirement.
+- Replaced creator overview fake zeros with ledger-backed fixed/affiliate/hybrid earnings and real accepted-campaign progress. Added creator MP4 upload controls and public rendering of approved portfolio videos.
+- Added GDPR JSON export at `/api/internal/data-export` and a Settings download card; exports omit OAuth tokens and secrets.
+- Replaced the daily analytics cron placeholder with `aggregateDailyRollups()` and migration 033's authenticated schedule.
+- Made payout invoices private, normalized invoice paths, added signed creator-scoped downloads, and fixed weekly payout processing so failed/not-ready Stripe transfers are retried instead of being marked paid.
+- Added admin manual-strike controls and audit-logged SLA dismiss/force-release/refund actions.
+- Aligned live amount displays and DB defaults/catalog currency to GBP via migrations 032 and 034 (migration 034 also protects payout invoices).
+- Migrations **032, 033, and 034 applied successfully** to Supabase. No fake campaigns, conversions, screenshots, or money movement created.
+- Creator plan usage now counts only accepted campaigns that are still active/paused, matching the enforced active-campaign cap and the Plan page explanation.
+- Remaining gaps and owner-only steps are recorded in `BLUEPRINT_GAP_AUDIT.md`; the homepage still has explicitly labelled illustrative demo cards, and admin moderation/status emails remain an open workflow.
+- Verification after the final cap fix: typecheck, lint, 162 tests, and production build all pass; deployment verification is still pending.
