@@ -746,6 +746,82 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Creators marketplace promo */}
+      <section id="creators" className="border-b border-border py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="fade-in-up grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <Badge variant="outline" className="mb-3">Creator Marketplace</Badge>
+              <h2 className="font-heading text-3xl font-bold sm:text-4xl">Find your perfect creator match.</h2>
+              <p className="mt-4 text-muted-foreground">
+                Browse the Adswish creator directory — filter by tier, niche, and rating, and see
+                verified follower counts from connected YouTube, Instagram, and TikTok channels at a glance.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  { title: "Tier badges", desc: "Micro, Mid, and Macro — know each creator's reach before you apply" },
+                  { title: "Verified channels", desc: "Green checkmarks on platforms with live, refreshable follower counts" },
+                  { title: "Niche filters", desc: "Narrow by category and sort by followers or rating in one click" },
+                ].map((f) => (
+                  <li key={f.title} className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
+                    <div>
+                      <p className="font-medium">{f.title}</p>
+                      <p className="text-sm text-muted-foreground">{f.desc}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="btn-slide">
+                  <Link href="/creators">Browse creators</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="card-lift">
+                  <Link href="/signup?role=creator">Join as a creator</Link>
+                </Button>
+              </div>
+            </div>
+            <div className="fade-in-up">
+              <div className="rounded-lg border border-border bg-surface shadow-sm overflow-hidden">
+                <div className="border-b border-border bg-muted/50 px-4 py-2.5 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="h-2.5 w-2.5 rounded-full bg-destructive/30" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-warning/30" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-success/30" />
+                  </div>
+                  <span className="ml-2 text-xs text-muted-foreground">adswish.com/creators</span>
+                </div>
+                <div className="grid gap-3 p-5 sm:grid-cols-2">
+                  {[
+                    { name: "Sarah M.", niche: "Fitness • 4.9", tier: "Micro", verified: true },
+                    { name: "Jake T.", niche: "Tech • 4.8", tier: "Mid", verified: true },
+                    { name: "Mia R.", niche: "Beauty • 5.0", tier: "Macro", verified: true },
+                    { name: "Leo K.", niche: "Gaming • 4.7", tier: "Mid", verified: false },
+                  ].map((c) => (
+                    <div key={c.name} className="rounded-lg border border-border p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center font-heading text-sm font-bold text-primary">
+                            {c.name.charAt(0)}
+                          </div>
+                          <span className="text-sm font-semibold">{c.name}</span>
+                        </div>
+                        {c.verified && <Badge variant="success" className="text-[9px]">Verified</Badge>}
+                      </div>
+                      <p className="mt-2 text-xs text-muted-foreground">{c.niche}</p>
+                      <div className="mt-2 flex items-center justify-between">
+                        <Badge variant="outline" className="text-[9px]">{c.tier}</Badge>
+                        <span className="font-mono text-xs font-bold">12.4k</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Dark CTA */}
       <section className="relative overflow-hidden bg-foreground py-24">
         <div className="absolute inset-0 radial-glow" />
@@ -787,6 +863,7 @@ export default function LandingPage() {
             <div>
               <h4 className="text-sm font-semibold">Creators</h4>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/creators" className="hover:text-foreground transition-colors">Marketplace</Link></li>
                 <li><Link href="/signup?role=creator" className="hover:text-foreground transition-colors">Join</Link></li>
                 <li><a href="#guides" className="hover:text-foreground transition-colors">Guides</a></li>
               </ul>
