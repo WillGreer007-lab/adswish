@@ -25,9 +25,8 @@ export async function refreshExpiredTokens() {
     .from("creator_social_accounts")
     .select("*")
     .not("refresh_token", "is", null)
-    .not("disconnected_at", "is", null)
-    .lt("token_expires_at", soon)
-    .is("disconnected_at", null);
+    .is("disconnected_at", null)
+    .lt("token_expires_at", soon);
 
   if (error) {
     logger.error({ error: error.message }, "Failed to fetch accounts for token refresh");

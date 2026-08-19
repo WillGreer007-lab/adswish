@@ -37,8 +37,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}/onboarding/creator/connect_social?error=token_exchange_failed`);
     }
 
+    // Instagram Basic Display short-lived tokens (24h) must be exchanged for a
+    // long-lived token (60 days) via ig_exchange_token — otherwise the account
+    // breaks after a day and the refresh job has nothing to refresh.
+    let accessToken = tokens.access_token;
+    let tokenExpiresIn = tokens.expires_in || 3600;
+    const longLived = await fetch(
+      `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${process.env.INSTAGRAM_CLIENT_SECRET!}&access_token=${tokens.access_token}`,
+    ).then((r) => r.json()).catch(() => ({}));
+
+    if (longLived?.access_token) {
+      accessToken = longLived.access_token;
+      tokenExpiresIn = longLived.expires_in || 60 * 24 * 60 * 60;
+    }
+
     const profileResponse = await fetch(
-      `https://graph.instagram.com/me?fields=username,followers_count&access_token=${tokens.access_token}`,
+      `https://graph.instagram.com/me?fields=username,followers_count&access_token=${accessToken}`,
     );
 
     const profile = await profileResponse.json();
@@ -54,10 +68,10 @@ export async function GET(request: NextRequest) {
       handle,
       follower_count: followerCount,
       verified_at: new Date().toISOString(),
-      access_token: tokens.access_token,
+      access_token: accessToken,
       refresh_token: null,
-      token_expires_at: new Date(Date.now() + (tokens.expires_in || 3600) * 1000).toISOString(),
-      refresh_token_expires_at: null,
+      token_expires_at: new Date(Date.now() + tokenExpiresIn * 1000).toISOString(),
+      refresh_token_expires_at: new Date(Date.now() + tokenExpiresIn * 1000).toISOString(),
       disconnected_at: null,
     }, { onConflict: "creator_id,platform" });
 

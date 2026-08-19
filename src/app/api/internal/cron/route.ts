@@ -12,6 +12,7 @@ import {
   generateMonthlyInvoices,
   retryExpiredCharges,
 } from "@/lib/finance";
+import { refreshExpiredTokens } from "@/lib/oauth/token-refresh";
 
 type JobName =
   | "deadlines"
@@ -22,7 +23,8 @@ type JobName =
   | "release-holds"
   | "charge-retries"
   | "weekly-payouts"
-  | "monthly-invoices";
+  | "monthly-invoices"
+  | "token-refresh";
 
 const ALL_JOBS: JobName[] = [
   "deadlines",
@@ -32,6 +34,7 @@ const ALL_JOBS: JobName[] = [
   "pixel-penalty",
   "release-holds",
   "charge-retries",
+  "token-refresh",
 ];
 
 async function run(job: JobName): Promise<unknown> {
@@ -59,6 +62,9 @@ async function run(job: JobName): Promise<unknown> {
       return `paid_out:${await processWeeklyPayouts()}`;
     case "monthly-invoices":
       return `generated:${await generateMonthlyInvoices()}`;
+    case "token-refresh":
+      await refreshExpiredTokens();
+      return "refreshed";
   }
 }
 

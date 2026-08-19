@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Users, Video } from "lucide-react";
+import { Star, Users, Video, Youtube, Instagram, Music2, ShieldCheck } from "lucide-react";
 
 export async function generateMetadata({
   params,
@@ -52,6 +52,18 @@ const tierConfig: Record<string, { label: string; color: string }> = {
   micro: { label: "Micro", color: "bg-muted text-muted-foreground" },
   mid: { label: "Mid", color: "bg-primary/10 text-primary" },
   macro: { label: "Macro", color: "bg-warning/10 text-warning" },
+};
+
+const platformIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  youtube: Youtube,
+  instagram: Instagram,
+  tiktok: Music2,
+};
+
+const platformLabels: Record<string, string> = {
+  youtube: "YouTube subscribers",
+  instagram: "Instagram followers",
+  tiktok: "TikTok followers",
 };
 
 const planConfig: Record<string, { label: string; color: string }> = {
@@ -146,16 +158,30 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         <div className="mt-6">
           <h2 className="mb-2 text-sm font-semibold">Connected accounts</h2>
           <div className="grid gap-3 sm:grid-cols-3">
-            {socialAccounts.map((acc) => (
-              <Card key={acc.id}>
-                <CardContent className="p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{acc.platform}</p>
-                  <p className="mt-1 text-sm font-medium">@{acc.handle}</p>
-                  <p className="font-mono text-lg font-bold">{acc.follower_count.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">followers</p>
-                </CardContent>
-              </Card>
-            ))}
+            {socialAccounts.map((acc) => {
+              const Icon = platformIcons[acc.platform] || Users;
+              return (
+                <Card key={acc.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{acc.platform}</p>
+                      </div>
+                      {acc.verified_at && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
+                          <ShieldCheck className="h-3 w-3" />
+                          Verified
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm font-medium">@{acc.handle}</p>
+                    <p className="font-mono text-lg font-bold">{acc.follower_count.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{platformLabels[acc.platform] || "followers"}</p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
