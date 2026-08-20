@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
   const { data: businessProfile } = await supabase
     .from("business_profiles")
-    .select("user_id, campaigns_created_this_month, campaigns_created_month, account_status, stripe_customer_id, verified_domain, balance_cents")
+    .select("user_id, company_name, campaigns_created_this_month, campaigns_created_month, account_status, stripe_customer_id, verified_domain, balance_cents")
     .eq("user_id", user.id)
     .single();
 
@@ -132,6 +132,20 @@ export async function POST(request: NextRequest) {
 
   const hasStripe = Boolean(businessProfile.stripe_customer_id);
   const hasTracking = Boolean(businessProfile.verified_domain) || (activeLinks?.length ?? 0) > 0;
+
+  // v3 onboarding gate: steps 1-4 (company info, domain/tracking, plan) must be
+  // done before ANY campaign can be created. Stripe (step 5) stays optional and
+  // is checked separately for affiliate/hybrid below.
+  if (!businessProfile.company_name?.trim() || !hasTracking) {
+    return NextResponse.json(
+      {
+        error:
+          "Finish onboarding before creating campaigns: add your company info (Settings → Profile) and verify your domain / install tracking (Settings → Tracking).",
+        code: "onboarding_incomplete",
+      },
+      { status: 403 },
+    );
+  }
 
   if ((base.type === "affiliate" || base.type === "hybrid") && (!hasStripe || !hasTracking)) {
     const missing = [];

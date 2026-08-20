@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Building2, ShieldCheck, Search } from "lucide-react";
+import { Star, Building2, ShieldCheck, Search, CheckCircle2, Crown } from "lucide-react";
 
 const planLabels: Record<string, string> = {
   business_free: "Free",
@@ -20,6 +20,8 @@ export type BusinessRow = {
   verified_domain: string | null;
   average_rating: number;
   plan_slug: string;
+  verified_badge: boolean;
+  gold_badge: boolean;
 };
 
 type SortMode = "rating" | "name";
@@ -121,6 +123,18 @@ export function BusinessGrid({ businesses }: { businesses: BusinessRow[] }) {
                       <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
                         <ShieldCheck className="h-3 w-3" />
                         {b.verified_domain}
+                      </span>
+                    )}
+                    {b.verified_badge && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-600">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Verified
+                      </span>
+                    )}
+                    {b.gold_badge && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
+                        <Crown className="h-3 w-3" />
+                        Gold
                       </span>
                     )}
                   </div>

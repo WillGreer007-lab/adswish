@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Users, Youtube, Instagram, Music2, ShieldCheck, Search } from "lucide-react";
+import { Star, Users, Youtube, Instagram, Music2, ShieldCheck, CheckCircle2, Crown, Search } from "lucide-react";
 import { TIER_META, type Tier } from "@/lib/tier";
 
 const tierConfig = TIER_META;
@@ -23,6 +23,8 @@ export type CreatorRow = {
   tier: string;
   niches: string[] | null;
   average_rating: number;
+  verified_badge: boolean;
+  gold_badge: boolean;
   creator_social_accounts: {
     platform: string;
     handle: string;
@@ -178,9 +180,27 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h2 className="truncate font-heading text-base font-bold group-hover:text-primary">
-                          {creator.display_name}
-                        </h2>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <h2 className="truncate font-heading text-base font-bold group-hover:text-primary">
+                            {creator.display_name}
+                          </h2>
+                          {creator.verified_badge && (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-full bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-600"
+                              title="Identity and plan verified by Adswish"
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                            </span>
+                          )}
+                          {creator.gold_badge && (
+                            <span
+                              className="inline-flex items-center gap-0.5 rounded-full bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600"
+                              title="1M+ followers on a verified platform"
+                            >
+                              <Crown className="h-3 w-3" />
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{creator.bio || "Creator on Adswish"}</p>
                       </div>
                     </div>

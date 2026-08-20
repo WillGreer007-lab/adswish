@@ -75,6 +75,13 @@ export async function GET(request: NextRequest) {
       disconnected_at: null,
     }, { onConflict: "creator_id,platform" });
 
+    try {
+      const { refreshCreatorBadges } = await import("@/lib/badges");
+      await refreshCreatorBadges(userId);
+    } catch {
+      /* the daily badges cron reconciles drift */
+    }
+
     return NextResponse.redirect(`${origin}/onboarding/creator/connect_social?success=instagram`);
   } catch (err) {
     console.error("Instagram OAuth error:", err);

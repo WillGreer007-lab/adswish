@@ -30,6 +30,7 @@ const BUSINESS_PLANS: Plan[] = [
     blurb: "Test the marketplace with your first fixed-fee campaigns.",
     features: [
       "3 active campaigns",
+      "6 integrations",
       "Fixed-fee campaigns only",
       "Basic pixel + extension tracking",
       "Manual applicant review",
@@ -45,7 +46,8 @@ const BUSINESS_PLANS: Plan[] = [
     blurb: "Run more campaigns with affiliate and hybrid payouts.",
     popular: true,
     features: [
-      "20 active campaigns",
+      "10 active campaigns",
+      "10 integrations",
       "Affiliate + hybrid campaigns",
       "Advanced tracking analytics",
       "Bulk approval tools",
@@ -60,7 +62,8 @@ const BUSINESS_PLANS: Plan[] = [
     period: "/mo",
     blurb: "Scale with unlimited campaigns and a service-level guarantee.",
     features: [
-      "Unlimited campaigns",
+      "25 campaigns",
+      "20 integrations",
       "Everything in Growth",
       "5 team seats",
       "4-hour SLA response",
@@ -79,6 +82,7 @@ const CREATOR_PLANS: Plan[] = [
     blurb: "Get discovered and apply to your first campaigns.",
     features: [
       "Up to 2 active campaigns",
+      "6 integrations",
       "Small-creator tier: fixed campaigns",
       "5 saved filter presets",
       "Basic profile + socials",
@@ -95,6 +99,7 @@ const CREATOR_PLANS: Plan[] = [
     popular: true,
     features: [
       "Up to 10 active campaigns",
+      "10 integrations",
       "Priority applicant badge",
       "Unlimited saved filters",
       "Advanced earnings analytics",
@@ -109,7 +114,8 @@ const CREATOR_PLANS: Plan[] = [
     period: "/mo",
     blurb: "The full toolkit for established creators.",
     features: [
-      "Unlimited active campaigns",
+      "25 active campaigns",
+      "20 integrations",
       "\u201cVerified Pro\u201d badge",
       "Campaign performance insights",
       "Everything in Pro",

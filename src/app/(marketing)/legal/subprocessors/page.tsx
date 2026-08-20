@@ -13,13 +13,14 @@ export default function SubprocessorsPage() {
     { name: "Resend", purpose: "Transactional email delivery", location: "US" },
     { name: "Vercel", purpose: "Hosting and edge functions", location: "US" },
     { name: "Sightengine", purpose: "Content moderation (optional)", location: "US/EU" },
+    { name: "Google", purpose: "Google Ads API, OAuth sign-in, and cloud infrastructure", location: "US/EU" },
   ];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="font-heading text-3xl font-bold">Subprocessors</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Last updated: August 19, 2026
+        Last updated: August 20, 2026
       </p>
       <p className="mt-4 text-sm text-muted-foreground">
         Adswish uses the following third-party subprocessors to provide our services.

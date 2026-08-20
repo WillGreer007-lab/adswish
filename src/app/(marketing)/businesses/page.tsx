@@ -36,7 +36,7 @@ export default async function BusinessesPage() {
 
   const { data: businesses } = await supabase
     .from("business_profiles")
-    .select("user_id, company_name, logo_url, bio, verified_domain, average_rating")
+    .select("user_id, company_name, logo_url, bio, verified_domain, average_rating, verified_badge, gold_badge")
     .is("deleted_at", null)
     .order("average_rating", { ascending: false })
     .limit(100);

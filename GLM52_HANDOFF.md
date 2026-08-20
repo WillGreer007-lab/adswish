@@ -1,5 +1,202 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — TOTP 2FA, Apple removed, Resend key rotated, landing integrations (Aug 20, NOT pushed)
+
+- **TOTP two-factor authentication (built + E2E-proven):**
+  - Settings → Security & 2FA (`/dashboard/settings/security`, server page with
+    role detection + `SecuritySettings` client component): enroll (QR + secret),
+    verify to activate, disable. Linked from the Settings index (new card).
+  - Login flow enforces 2FA **at the app level** (works regardless of the
+    project's MFA mode — this instance is "Optional", so GoTrue's password
+    grant returns 200 + AAL1 session instead of `mfa_verification_required`):
+    - `probeClient()` = `createClient(..., { auth: { persistSession: false } })`
+      so NO session is persisted before 2FA completes (closes the AAL1-leak gap).
+    - After password/OTP success, checks `data.user.factors` for a verified
+      factor → shows the 6-digit code step → challenge/verify → `setSession`
+      with the AAL2 tokens on the main (cookie-persisting) client.
+    - The `mfa_verification_required` error branch is still handled for
+      projects that enforce server-side.
+  - **2FA at sign-up:** brand-new accounts (email/password confirmation,
+    one-time code, or first Google sign-in) pass through an **optional**
+    `/setup-mfa` step before onboarding — QR code + manual secret +
+    verify a real code to enable 2FA immediately; fully skippable, and the
+    page auto-redirects anyone with a verified factor straight to `next`.
+    Wired via the fresh-account branch (`created_at` < 15 min) in
+    `/auth/callback` + the signup page's OTP path.
+  - **FIXED a 404 in the 2FA gate:** the middleware redirected users with a
+    verified factor to `/auth/mfa`, but the (auth) route group renders at the
+    root — the real page is `/mfa`, so Google/OTP users landing on a protected
+    route at AAL1 hit a 404 instead of the authenticator screen. Now `/mfa`.
+  - **FIXED a build-breaking PDF bug:** the changelog PDF route embedded
+    pdf-lib's WinAnsi-only Helvetica font and `widthOfTextAtSize` threw on the
+    "→" in changelog copy (build failed at /legal/changelog/pdf). Added
+    `toPdfSafe()` to replace/drop non-WinAnsi characters before measuring and
+    drawing.
+- **Spec §22–24 (creator profile, friends, badges) — built (Aug 20):**
+  - Profile header now shows @handle (primary social) + rating count; reviews
+    enriched with the reviewer's business name + campaign title + relative
+    time (read via service role — `reviews` has no public-read RLS policy,
+    same pattern as the portfolio query).
+  - New public **Campaign History** section: accepted applications joined to
+    campaigns + business names (service role), Completed/Active/Ended badges.
+  - `ConnectButton` friends state now matches spec: green **Added** + **Copy
+    Username** (clipboard, @handle) + **Message** (role-aware link to the
+    viewer's Messages hub); @handle shows beside Add Friend.
+  - Badges tightened to spec §24: blue = paid plan AND ≥1 verified social;
+    gold = **Premium** plan AND ≥1M followers. Identity (ID upload) check is
+    NOT wired — needs the ID-upload + admin-review flow (documented gap).
+  - Website URL field: not in schema (no `website_url` column) — skipped,
+    documented.
+  - Verified: typecheck ✓ · lint 0 errors ✓ · 165 tests ✓ · build ✓.
+- **QR-code auth fallback (no email needed) — built (Aug 20):**
+  - When the confirmation/OTP email doesn't arrive, users can now sign up or
+    log in with an authenticator app: the app shows a QR code (otpauth URI,
+    rendered with the new `qrcode` dep), the user scans it with Google/Microsoft
+    Authenticator/Authy/1Password and enters the 6-digit code.
+  - `src/lib/totp.ts`: RFC 6238 (HMAC-SHA1, 30s, 6 digits, ±1 window) + base32
+    + `otpauthUri` — pure, unit-tested against the RFC test vectors (7 tests).
+  - Migration **040 APPLIED** (cloud): `totp_credentials` (user's secret,
+    deny-all, service-role only) + `totp_pending` (half-finished signups,
+    15-min expiry). New reusable `scripts/apply-migration.mjs` (Management API).
+  - Routes: `POST /api/internal/auth/qr-signup` (start → secret+QR, complete →
+    verifies code, creates the Supabase account + profile rows, stores the
+    secret, issues a session) and `POST /api/internal/auth/totp-login` (email +
+    code → session). Session issuance = admin password reset + `signInWithPassword`
+    on a non-persisting client (no email, no PKCE). Both rate-limited via Upstash.
+  - UI: /signup gets "Email not arriving? Sign up with your authenticator app"
+    (QR + secret + code); /login gets "Log in with your authenticator app"
+    (email + code). NOTE: authenticator-signup users log in ONLY via this path
+    (they have no known password) — password login will fail for them by design.
+  - E2E-proven: `scripts/qr-fallback-e2e.mjs` — start → real TOTP code →
+    complete (session issued) → totp-login with a fresh code → getUser matches;
+    throwaway user deleted afterwards.
+  - Verified: typecheck ✓ · lint 0 errors ✓ · 172 tests ✓ · build ✓.
+- **Business-side profiles (spec §22) + hover tooltips (§21) — built (Aug 20):**
+  - Migration **041 APPLIED** (cloud): `business_profiles.verified_badge` +
+    `gold_badge` (blue = Growth/Enterprise + verified_domain; gold =
+    Enterprise + kyb verified). `badges.ts` gained `refreshBusinessBadges` /
+    `refreshAllBusinessBadges`; the cron `badges` job now sweeps creators +
+    businesses.
+  - `/businesses/[id]` rebuilt to mirror the creator page: header badges +
+    verified-domain line + rating with review count, **Connected channels**
+    (website card, ✅ Active), **Recent reviews** (reviewer creator name +
+    campaign + relative time, service-role enriched), **Campaign history**
+    (real non-draft campaigns with Completed/Active/Ended badges), and
+    `ConnectButton` stays. OG metadata added.
+  - `/businesses` grid + `BusinessGrid` cards now show Verified/Gold pills.
+  - **§21 tooltips:** new `InfoTooltip` + `SectionLabel` (ℹ️ icon → dark
+    tooltip with white text above on hover) on both profile pages' sections
+    (Niches, Connected accounts, Portfolio, Reviews, Campaign history).
+  - Verified: typecheck ✓ · lint 0 errors ✓ · 172 tests ✓ · build ✓.
+  - **Proven** via `scripts/mfa-e2e-test.mjs` (safe, self-cleaning): real
+    user → enroll → **real generated TOTP code** → verify (AAL2) → login gate
+    detects factor → challenge + fresh code → AAL2 tokens. All green; user
+    deleted afterwards. MFA REST paths (this GoTrue version):
+    `POST /auth/v1/factors`, `POST /factors/{id}/challenge`,
+    `POST /factors/{id}/verify`, `DELETE /factors/{id}` (no challengeId on
+    unenroll in this SDK).
+- **Apple sign-in REMOVED** from login + signup (user hasn't set it up).
+  Microsoft (Azure) button remains with the "not enabled yet" hint.
+- **Resend API key ROTATED** (the old one had appeared in a tool transcript):
+  new sending-only key (`sending_access`) created, written to `.env.local`,
+  pushed into Supabase SMTP (smtp_user + smtp_pass) — **and the full SMTP
+  block re-applied because a partial PATCH wipes host/port**. Old leaked key
+  + 2 orphaned keys deleted. Remaining: "Onboarding" (unused, left alone) +
+  the new key.
+- **Landing page**: new Integrations section (after the deep-dives, before
+  the Chrome extension) — all 14 brand logos in dashboard-style muted tiles,
+  verified rendering (14 SVGs + names).
+- **Verified:** typecheck ✓ · lint 0 errors ✓ · 165 tests ✓ · build ✓ ·
+  `/login` shows Microsoft only ✓ · changelog v3.3.0 live ✓. **NOT pushed.**
+
+---
+
+## Previous — Integration hub v2 (logos + add/remove), Microsoft sign-in, Resend SMTP (Aug 20, NOT pushed)
+
+- **Integration hub rebuilt** (`src/components/dashboard/integration-hub.tsx`):
+  - Real brand logos (simple-icons paths inlined in `integration-logos.tsx`,
+    rendered `currentColor`; LinkedIn hand-drawn, Sightengine generic
+    shield-check mark since simple-icons lacks both).
+  - State machine replaces "Coming soon / Notify me": green **Add** →
+    green **Added** pill (card tinted) + red **Remove** button.
+  - Persisted per user via `user_integrations` (migration **039 APPLIED**, RLS
+    owner-only) + `GET/POST/DELETE /api/internal/integrations`; plan limit
+    enforced server-side (critical 5 always count; `integrationLimitForPlan`
+    unchanged: free 6 / tier-2 10 / tier-3 20).
+  - E2E-verified in preview: Add → 6/6 + "Added"/"Remove"; Remove → 5/6 +
+    "Not connected"/"Add".
+- **Microsoft + Apple sign-in** (`src/components/ui/oauth-icons.tsx`): buttons
+  on `/login` + `/signup` calling `signInWithOAuth(provider: azure|apple)`;
+  graceful "provider not enabled" message until admin configures them in
+  Supabase Auth (no Azure/Apple keys exist yet — external_azure_enabled=false).
+- **Resend custom SMTP CONFIGURED in Supabase** (config/auth PATCH):
+  `smtp_host=smtp.resend.com`, `smtp_port=465`, user/pass = RESEND_API_KEY,
+  sender `Adswish <onboarding@adswish.com>`. Rate limits raised:
+  `rate_limit_email_sent` 2 → **30**, `rate_limit_otp` = 30.
+  **⚠️ Emails pause until the user adds the Resend DNS records** (domain
+  `adswish.com` added to Resend: DKIM TXT `resend._domainkey`, MX `send` →
+  `feedback-smtp.us-east-1.amazonses.com`, SPF TXT `send`). Records in
+  Resend dashboard / domain id `a9e3bf44-c5b0-4d91-8e36-e53872e19e61`.
+  ⚠️ RESEND_API_KEY value appeared in one tool output — recommend rotation.
+- **Verified:** typecheck ✓ · lint 0 errors ✓ · 165 tests ✓ · build ✓ ·
+  migration 039 applied ✓ · `/login` + `/signup` SSR include Microsoft/Apple ✓ ·
+  integrations page live with logos + working Add/Remove ✓. **NOT pushed.**
+
+---
+
+## Previous — Google Ads Phase 4 + Supabase email config (Aug 20, NOT pushed)
+
+- **Supabase auth config FIXED via Management API (PATCH config/auth):**
+  - `site_url` was the stale `https://adswish-atlas-5563.vercel.app/` → now
+    `https://adswish-lake.vercel.app/` (the live domain).
+  - `uri_allow_list` only had `http://localhost:3000/auth/callback` (no wildcard) —
+    every redirect with query params (Google OAuth `?next=/onboarding&role=…`,
+    password reset `?next=/update-password`) was REJECTED. Now includes
+    `http://localhost:3000/**` + `https://adswish-lake.vercel.app/**` + the exact
+    callback paths. This was the root cause of the sign-in/verify failures.
+  - `mailer_otp_length` 8 → 6 (matches the UI). Email templates were already
+    correct (`{{ .ConfirmationURL }}`); SMTP unset (Supabase email).
+- **PKCE cross-browser fix:** signup/OTP/reset now embed `?email=…` in
+  `emailRedirectTo`; `/auth/callback` catches the "PKCE code verifier not found"
+  failure on confirmation links and verifies the account server-side (service
+  role, `auth.users` lookup + `email_confirm: true`), redirecting to
+  `/login?confirmed=1`. Recovery links (`next=/update-password`) keep the error
+  path. Login page shows a green "email verified" banner.
+- **Google Ads Phase 4 (migration 038 APPLIED):**
+  - `deliverable_ab_assets` (3 variants/deliverable, RLS owner) +
+    `google_ads_partner_credits` (not_applied/applied/approved/declined) +
+    `google_ads_campaigns.ab_asset_id`.
+  - `src/lib/google-ads/thumbnails.ts`: ffmpeg-static (installed, binary present)
+    extracts frames at 10/50/90% duration → public `google-ads-assets` bucket
+    (created on demand); graceful `failed` rows when ffmpeg/video unavailable.
+  - Routes: `GET/POST /api/internal/google-ads/thumbnails`, `…/[id]/select`,
+    `GET/POST /api/internal/google-ads/partner-credits`. All 401 unauth ✓.
+  - Job `google-ads-thumbnails` wired into the cron route (auto-generates for
+    approved deliverables without assets).
+  - Analytics route now returns `organic` (30-day conversions/revenue/daily via
+    the user's campaigns → tracking links → conversions) + `blended` totals;
+    `GoogleAdsAnalytics` rebuilt with revenue-by-source pie + organic 30-day
+    series + blended ROAS cards.
+  - Dashboard: `GoogleAdsAbAssets` + `GoogleAdsPartnerCredits` mounted between
+    analytics and the kill switch.
+- **Verified:** typecheck ✓ · lint 0 errors ✓ · **165/165 tests** ✓ · build ✓ ·
+  migration applied (tables 200 via service-role REST) · routes 401 unauth ✓ ·
+  `/login?confirmed=1` banner renders ✓. **NOT pushed.**
+- **E2E-proven after this entry (same session):**
+  - Email flow: real confirmation link followed with NO cookies → email
+    auto-confirmed (both the implicit path and the PKCE branch, which now uses
+    `auth.admin.listUsers` — `auth.users` is NOT exposed to PostgREST, 406) →
+    password login SUCCESS.
+  - A/B thumbnails: real ffmpeg-generated MP4 uploaded → approved
+    (`completed` status) deliverable → 3 JPEG frames extracted (10/50/90%),
+    stored in `google-ads-assets`, all HTTP 200. **Two bugs fixed during E2E:**
+    (1) deliverable status filter used `approved` but approval stamps
+    `completed` (thumbnails route + job); (2) `next dev` rewrites the
+    ffmpeg-static path to a virtual `/ROOT/…` — lib now falls back to the real
+    node_modules path. Also raised `mailer_otp_length` to 6; `rate_limit_email_sent`
+    (2) can't be raised without custom SMTP — fine for production (per-address
+    limit). All test users/campaigns/assets cleaned up.
+
 ## LIVE STRIPE KEYS — Aug 18 2026
 
 - `STRIPE_SECRET_KEY` + `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in `.env.local` and `vercel-env.txt` are now the **live** (`sk_live_`/`pk_live_`) keys, verified against the Stripe API.

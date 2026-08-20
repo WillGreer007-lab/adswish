@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles } from "lucide-react";
+import { Sparkles, CheckCircle2, Crown } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { SocialConnections } from "@/components/dashboard/social-connections";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { ManualFollowerVerification } from "@/components/dashboard/manual-follower-verification";
@@ -83,6 +84,20 @@ export default async function CreatorProfilePage({
               <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${tierColor(profile.tier)}`}>
                 {tierLabel(profile.tier)}
               </span>
+              {profile.verified_badge && (
+                <Tooltip label="Verified — identity and paid plan confirmed by Adswish">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2.5 py-0.5 text-xs font-semibold text-sky-600">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+                  </span>
+                </Tooltip>
+              )}
+              {profile.gold_badge && (
+                <Tooltip label="Gold — 1M+ followers on a verified platform">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-semibold text-amber-600">
+                    <Crown className="h-3.5 w-3.5" /> Gold
+                  </span>
+                </Tooltip>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-muted-foreground">{profile.bio || "No bio yet."}</p>
             {profile.stripe_connect_ready && (

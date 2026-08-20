@@ -10,6 +10,21 @@
 export const PLATFORM_COMMISSION_RATE = 0.1;
 export const ESCROW_HOLD_DAYS = 7;
 
+/**
+ * Creator plan → escrow hold days (v3): Free 7d, Pro 5d, Premium 3d.
+ * Unknown/absent plan slugs fall back to ESCROW_HOLD_DAYS (7).
+ */
+export const CREATOR_PLAN_HOLD_DAYS: Record<string, number> = {
+  creator_free: 7,
+  creator_pro: 5,
+  creator_premium: 3,
+};
+
+/** Hold days for a creator's plan slug (unknown slug → default 7). */
+export function escrowHoldDaysForPlan(planSlug: string | null | undefined): number {
+  return CREATOR_PLAN_HOLD_DAYS[planSlug ?? ""] ?? ESCROW_HOLD_DAYS;
+}
+
 /** 90% of the order amount, rounded to cents (2 decimals). */
 export function calculateCreatorCut(totalAmount: number): number {
   const rawCut = totalAmount * (1 - PLATFORM_COMMISSION_RATE);
@@ -26,6 +41,6 @@ export function calculatePlatformFee(totalAmount: number): number {
 }
 
 /** When the escrow hold on a conversion expires (UTC ISO string). */
-export function escrowHoldExpiresAt(fromMs: number = Date.now()): string {
-  return new Date(fromMs + ESCROW_HOLD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+export function escrowHoldExpiresAt(fromMs: number = Date.now(), days: number = ESCROW_HOLD_DAYS): string {
+  return new Date(fromMs + days * 24 * 60 * 60 * 1000).toISOString();
 }

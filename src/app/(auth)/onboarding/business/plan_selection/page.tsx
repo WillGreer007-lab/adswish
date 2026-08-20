@@ -28,7 +28,7 @@ const PLANS = [
     price: "£7",
     period: "/mo",
     features: [
-      "Unlimited campaigns",
+      "Up to 10 campaigns",
       "Advanced pixel analytics",
       "Bulk approval tools",
       "Priority support",

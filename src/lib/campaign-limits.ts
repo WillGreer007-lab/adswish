@@ -11,8 +11,8 @@ export const FREE_PLAN_MONTHLY_LIMIT = 3;
 /** Active-campaign creation limits per business plan (per calendar month). */
 export const BUSINESS_PLAN_CAMPAIGN_LIMITS: Record<string, number> = {
   business_free: 3,
-  business_growth: 20,
-  business_enterprise: Infinity,
+  business_growth: 10,
+  business_enterprise: 25,
 };
 
 /**
@@ -22,7 +22,7 @@ export const BUSINESS_PLAN_CAMPAIGN_LIMITS: Record<string, number> = {
 export const CREATOR_PLAN_CAMPAIGN_LIMITS: Record<string, number> = {
   creator_free: 2,
   creator_pro: 10,
-  creator_premium: Infinity,
+  creator_premium: 25,
 };
 
 export type CampaignCounterState = {

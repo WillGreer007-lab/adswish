@@ -438,6 +438,271 @@ export async function aggregateDailyRollups(day: Date = new Date(Date.now() - 24
   return rows.length;
 }
 
+/**
+ * Recompute all creator + business badges (blue/gold per spec §24, mirrored
+ * for businesses). Catches badge drift from social connects, manual
+ * approvals, subscription changes, and domain verification.
+ */
+export async function refreshAllBadges(): Promise<number> {
+  const { refreshAllCreatorBadges, refreshAllBusinessBadges } = await import("@/lib/badges");
+  const creators = await refreshAllCreatorBadges();
+  const businesses = await refreshAllBusinessBadges();
+  return creators + businesses;
+}
+
+/**
+ * Google Ads: mirror live campaign statuses into google_ads_campaigns. Only
+ * runs for connections that have a customer id; without the developer token
+ * the live calls throw and the job skips that connection gracefully.
+ */
+export async function syncGoogleAdsCampaigns(): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: connections } = await supabase
+    .from("google_ads_connections")
+    .select("user_id, google_customer_id")
+    .eq("status", "active")
+    .not("google_customer_id", "is", null);
+
+  let synced = 0;
+  for (const conn of connections ?? []) {
+    try {
+      const { getValidAccessToken } = await import("@/lib/google-ads/connection");
+      const { listCampaigns } = await import("@/lib/google-ads/client");
+      const token = await getValidAccessToken(conn.user_id);
+      if (!token) continue;
+      const campaigns = await listCampaigns(token, conn.google_customer_id);
+
+      for (const c of campaigns) {
+        const status = c.status.toLowerCase();
+        const recordStatus = status === "enabled" ? "active" : status === "paused" ? "paused" : "removed";
+        const { data: existing } = await supabase
+          .from("google_ads_campaigns")
+          .select("id")
+          .eq("user_id", conn.user_id)
+          .eq("google_campaign_id", c.id)
+          .maybeSingle();
+
+        if (existing?.id) {
+          await supabase
+            .from("google_ads_campaigns")
+            .update({
+              status: recordStatus,
+              google_campaign_name: c.name,
+              last_synced_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existing.id);
+        } else {
+          await supabase.from("google_ads_campaigns").insert({
+            user_id: conn.user_id,
+            google_campaign_id: c.id,
+            google_campaign_name: c.name,
+            status: recordStatus,
+            last_synced_at: new Date().toISOString(),
+          });
+        }
+        synced++;
+      }
+    } catch (err) {
+      logger.warn({ user_id: conn.user_id, err: String(err) }, "Google Ads sync skipped (developer token or API error)");
+    }
+  }
+  return synced;
+}
+
+/**
+ * Google Ads reporting sync: pull real spend/revenue/conversions per campaign
+ * from the Ads API and store them on the local records (feeds the blended ROAS
+ * charts and the kill switch). Requires the developer token — without it the
+ * job skips every connection cleanly and charts stay honest zeros.
+ */
+export async function syncGoogleAdsReporting(): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: connections } = await supabase
+    .from("google_ads_connections")
+    .select("user_id, google_customer_id")
+    .eq("status", "active")
+    .not("google_customer_id", "is", null);
+
+  let synced = 0;
+  for (const conn of connections ?? []) {
+    try {
+      const { getValidAccessToken } = await import("@/lib/google-ads/connection");
+      const { listCampaignMetrics } = await import("@/lib/google-ads/client");
+      const token = await getValidAccessToken(conn.user_id);
+      if (!token) continue;
+
+      const metrics = await listCampaignMetrics(token, conn.google_customer_id);
+      for (const m of metrics) {
+        const { data: existing } = await supabase
+          .from("google_ads_campaigns")
+          .select("id")
+          .eq("user_id", conn.user_id)
+          .eq("google_campaign_id", m.id)
+          .maybeSingle();
+        if (!existing?.id) continue;
+        await supabase
+          .from("google_ads_campaigns")
+          .update({
+            total_spend_cents: m.spendCents,
+            revenue_cents: m.revenueCents,
+            conversions: m.conversions,
+            last_synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        synced++;
+      }
+    } catch (err) {
+      logger.warn(
+        { user_id: conn.user_id, err: String(err) },
+        "Google Ads reporting sync skipped (developer token or API error)",
+      );
+    }
+  }
+  return synced;
+}
+
+/**
+ * Google Ads budget protection: pause campaigns whose local spend/revenue
+ * breaches the user's kill-switch thresholds. Spend data only exists once the
+ * reporting sync runs (needs the developer token), so this is inert until then
+ * — it never pauses on zero data.
+ */
+export async function runGoogleAdsKillSwitch(): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+  const { data: connections } = await supabase
+    .from("google_ads_connections")
+    .select("user_id, google_customer_id, kill_switch")
+    .eq("status", "active");
+
+  let paused = 0;
+  for (const conn of connections ?? []) {
+    const ks = (conn.kill_switch ?? {}) as {
+      maxDaily?: number;
+      maxTotal?: number;
+      minConversions?: number;
+      minRoas?: number;
+    };
+    if (!ks.maxTotal && !ks.maxDaily && !ks.minRoas && !ks.minConversions) continue;
+
+    const { data: campaigns } = await supabase
+      .from("google_ads_campaigns")
+      .select("id, google_campaign_id, status, total_spend_cents, revenue_cents, conversions, daily_budget_cents")
+      .eq("user_id", conn.user_id)
+      .in("status", ["active", "pending"]);
+
+    for (const c of campaigns ?? []) {
+      const spend = Number(c.total_spend_cents) || 0;
+      const revenue = Number(c.revenue_cents) || 0;
+      const conversions = Number(c.conversions) || 0;
+      const maxTotalCents = ks.maxTotal ? Math.round(ks.maxTotal * 100) : Infinity;
+      const maxDailyCents = ks.maxDaily ? Math.round(ks.maxDaily * 100) : Infinity;
+      const roas = spend > 0 ? revenue / spend : null;
+      const enoughConversions = conversions >= (ks.minConversions ?? 0);
+
+      const breached =
+        enoughConversions &&
+        (spend >= maxTotalCents ||
+          (Number.isFinite(maxDailyCents) && Number(c.daily_budget_cents) > 0 && spend >= maxDailyCents) ||
+          (typeof ks.minRoas === "number" && roas !== null && roas < ks.minRoas));
+
+      if (!breached) continue;
+
+      let note = "Paused automatically — budget protection triggered.";
+      if (c.google_campaign_id) {
+        try {
+          const { getValidAccessToken } = await import("@/lib/google-ads/connection");
+          const { updateGoogleAdsCampaignStatus } = await import("@/lib/google-ads/client");
+          const token = await getValidAccessToken(conn.user_id);
+          if (token && conn.google_customer_id) {
+            await updateGoogleAdsCampaignStatus(token, conn.google_customer_id, c.google_campaign_id, "PAUSED");
+            note = "Paused in Google Ads — budget protection triggered.";
+          }
+        } catch {
+          /* keep the local pause even if the live pause fails */
+        }
+      }
+
+      await supabase
+        .from("google_ads_campaigns")
+        .update({ status: "paused", updated_at: new Date().toISOString() })
+        .eq("id", c.id);
+      await supabase.from("google_ads_activity_log").insert({
+        user_id: conn.user_id,
+        campaign_id: c.id,
+        kind: "warning",
+        message: note,
+      });
+      await supabase.from("notifications").insert({
+        user_id: conn.user_id,
+        type: "system",
+        body: "A Google Ads campaign was auto-paused — budget protection triggered.",
+        link: "/dashboard/business/google-ads",
+      });
+      paused++;
+    }
+  }
+  return paused;
+}
+
+/**
+ * Google Ads A/B thumbnails: auto-extract three thumbnail frames from freshly
+ * approved deliverables that don't have assets yet. Runs every cron tick;
+ * gracefully skips rows whose video is missing or unprocessable.
+ */
+export async function generateGoogleAdsThumbnails(): Promise<number> {
+  const supabase = createSupabaseServiceRoleClient();
+
+  type DeliverableRow = {
+    id: string;
+    campaign_id: string;
+    video_url: string | null;
+    campaigns: { business_id: string } | null;
+  };
+  const { data: candidates } = await supabase
+    .from("deliverables")
+    .select("id, campaign_id, video_url, campaigns(business_id)")
+    .eq("status", "completed") // approval stamps `completed` (see approve route)
+    .not("video_url", "is", null)
+    .order("updated_at", { ascending: false })
+    .limit(25);
+
+  let generated = 0;
+  for (const row of (candidates ?? []) as DeliverableRow[]) {
+    if (!row.video_url || !row.campaigns?.business_id) continue;
+
+    // Skip deliverables that already have assets (any status) — regeneration
+    // is only triggered from the UI.
+    const { count } = await supabase
+      .from("deliverable_ab_assets")
+      .select("*", { count: "exact", head: true })
+      .eq("deliverable_id", row.id);
+    if (count) continue;
+
+    try {
+      const { generateDeliverableThumbnails } = await import("@/lib/google-ads/thumbnails");
+      const result = await generateDeliverableThumbnails(
+        { id: row.id, campaign_id: row.campaign_id, video_url: row.video_url },
+        row.campaigns.business_id,
+      );
+      generated += result.generated;
+      if (result.failed) {
+        logger.warn(
+          { deliverable_id: row.id, error: result.error },
+          "A/B thumbnail generation failed",
+        );
+      }
+    } catch (err) {
+      logger.warn(
+        { deliverable_id: row.id, err: String(err) },
+        "A/B thumbnail job skipped a deliverable",
+      );
+    }
+  }
+  return generated;
+}
+
 export async function checkCampaignCompletion() {
   const supabase = createSupabaseServiceRoleClient();
 

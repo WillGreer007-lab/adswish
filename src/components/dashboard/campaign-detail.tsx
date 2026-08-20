@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { AmplifyButton } from "@/components/dashboard/google-ads/amplify-button";
 
 interface CampaignRow {
   id: string;
@@ -435,6 +436,12 @@ export function CampaignDetail({
                             <AlertTriangle className="h-3 w-3" /> Review flagged content before approving
                           </span>
                         )}
+                      </div>
+                    )}
+
+                    {d.business_approved && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <AmplifyButton />
                       </div>
                     )}
                   </div>

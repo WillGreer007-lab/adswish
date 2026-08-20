@@ -9,7 +9,7 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="font-heading text-3xl font-bold">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Last updated: August 19, 2026</p>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: August 20, 2026</p>
 
       <div className="prose prose-sm mt-8 max-w-none space-y-6 text-muted-foreground">
         <div className="rounded-lg border border-border bg-muted/30 p-4">
@@ -100,7 +100,32 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-semibold text-foreground">8. Contact</h2>
+          <h2 className="font-heading text-xl font-semibold text-foreground">8. Google Ads &amp; OAuth Data</h2>
+          <p className="mt-2">
+            When you connect Google Ads through the platform&apos;s integrations, you
+            grant Adswish OAuth access to your Google Ads account. We use that access
+            only to list, create, and manage campaigns you choose to amplify, and to
+            read performance data for your dashboards. Google OAuth tokens are stored
+            encrypted and are never exposed to other users; you can disconnect the
+            integration at any time, which revokes our access. Adswish never shares
+            your Google Ads data with third parties without your consent, and paid
+            (Google Ads) data is reported separately from organic creator traffic.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-semibold text-foreground">9. Session &amp; Inactivity Data</h2>
+          <p className="mt-2">
+            For security, sessions end automatically after a configurable period of
+            inactivity (1–30 minutes, default 1 minute) and when you leave the
+            dashboard via the browser back button. No personal data is transmitted to
+            us by these timeouts; they simply end the authenticated session on your
+            device.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-semibold text-foreground">10. Contact</h2>
           <p className="mt-2">
             For privacy questions or data requests, contact{" "}
             <a href="mailto:privacy@adswish.com" className="text-primary hover:underline">

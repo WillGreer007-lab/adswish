@@ -68,6 +68,13 @@ export async function GET(request: NextRequest) {
       disconnected_at: null,
     }, { onConflict: "creator_id,platform" });
 
+    try {
+      const { refreshCreatorBadges } = await import("@/lib/badges");
+      await refreshCreatorBadges(userId);
+    } catch {
+      /* the daily badges cron reconciles drift */
+    }
+
     return NextResponse.redirect(`${origin}/onboarding/creator/connect_social?success=tiktok`);
   } catch (err) {
     console.error("TikTok OAuth error:", err);

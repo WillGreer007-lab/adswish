@@ -9,7 +9,7 @@ export default function TermsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
       <h1 className="font-heading text-3xl font-bold">Terms of Service</h1>
-      <p className="mt-2 text-sm text-muted-foreground">Last updated: August 19, 2026</p>
+      <p className="mt-2 text-sm text-muted-foreground">Last updated: August 20, 2026</p>
 
       <div className="prose prose-sm mt-8 max-w-none space-y-6 text-muted-foreground">
         <div className="rounded-lg border border-border bg-muted/30 p-4">
@@ -121,7 +121,49 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="font-heading text-xl font-semibold text-foreground">10. Contact</h2>
+          <h2 className="font-heading text-xl font-semibold text-foreground">10. Google Ads Amplification</h2>
+          <p className="mt-2">
+            Businesses may amplify approved creator content as paid Google Ads
+            directly from the Adswish dashboard. Adswish connects to Google Ads
+            through the user&apos;s own OAuth consent: the business authorizes access
+            to its Google Ads account and we never access ad budgets without that
+            authorization. The business&apos;s ad spend is billed directly by Google;
+            Adswish charges no commission or markup on ad spend.
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-6">
+            <li>
+              <strong>Compliance:</strong> ad campaigns created through Adswish use
+              parallel tracking and comply with Google&apos;s advertising policies and
+              the laws of the countries where the ads are served. You are responsible
+              for the lawfulness of the products and claims advertised.
+            </li>
+            <li>
+              <strong>Budget protection:</strong> the optional auto-kill switch pauses
+              a campaign automatically when it breaches the thresholds you set. You
+              can resume a paused campaign at any time.
+            </li>
+            <li>
+              <strong>Developer access:</strong> live campaign creation and management
+              require the Google Ads API developer token you provide; until it is
+              added, campaigns are saved as drafts and nothing is pushed to Google.
+            </li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-semibold text-foreground">11. Sessions &amp; Security</h2>
+          <p className="mt-2">
+            For your protection, Adswish automatically ends your session after a
+            period of inactivity (configurable in Settings between 1 and 30 minutes),
+            and navigating away from the dashboard with the browser back button ends
+            the session. You will be asked to sign in again, and any unsaved work may
+            be lost. We recommend keeping the inactivity timeout under 10 minutes for
+            the best security posture.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-heading text-xl font-semibold text-foreground">12. Contact</h2>
           <p className="mt-2">
             For questions about these terms, contact{" "}
             <a href="mailto:legal@adswish.com" className="text-primary hover:underline">

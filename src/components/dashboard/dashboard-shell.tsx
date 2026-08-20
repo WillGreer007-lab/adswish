@@ -13,11 +13,15 @@ import {
   User,
   BarChart3,
   Crown,
+  Puzzle,
+  Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BackButton } from "@/components/dashboard/back-button";
+import { SessionTimeoutGuard } from "@/components/dashboard/session-timeout-guard";
+import { BackButtonLogout } from "@/components/dashboard/back-button-logout";
 
 const CREATOR_NAV = [
   { label: "Overview", href: "/dashboard/creator", icon: LayoutDashboard },
@@ -30,6 +34,7 @@ const CREATOR_NAV = [
   { label: "Plan", href: "/dashboard/creator/plan", icon: Crown },
   { label: "Profile", href: "/dashboard/creator/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  { label: "Integrations", href: "/dashboard/creator/integrations", icon: Puzzle },
 ];
 
 const BUSINESS_NAV = [
@@ -38,11 +43,13 @@ const BUSINESS_NAV = [
   { label: "Applicants", href: "/dashboard/business/applicants", icon: Users },
   { label: "Payments", href: "/dashboard/business/payments", icon: DollarSign },
   { label: "Analytics", href: "/dashboard/business/analytics", icon: BarChart3 },
+  { label: "Google Ads", href: "/dashboard/business/google-ads", icon: Target },
   { label: "Tracking", href: "/dashboard/business/tracking", icon: Radar },
   { label: "Messages", href: "/dashboard/business/messages", icon: MessageSquare },
   { label: "Plan", href: "/dashboard/business/plan", icon: Crown },
   { label: "Profile", href: "/dashboard/business/profile", icon: User },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
+  { label: "Integrations", href: "/dashboard/business/integrations", icon: Puzzle },
 ];
 
 export function DashboardShell({
@@ -59,9 +66,13 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const nav = role === "creator" ? CREATOR_NAV : BUSINESS_NAV;
+  const roleLabel = role === "business" ? "Business" : "Creator";
 
   return (
     <div className="flex min-h-screen">
+      <SessionTimeoutGuard />
+      <BackButtonLogout />
+
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 flex-shrink-0 border-r border-border bg-surface md:flex md:flex-col">
         <div className="flex items-center gap-2 px-4 py-4">
@@ -85,13 +96,12 @@ export function DashboardShell({
           ))}
         </nav>
         <div className="border-t border-border p-4">
-          {planBadge && (
-            <span className="mb-2 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-              {planBadge}
-            </span>
-          )}
           <p className="text-xs text-muted-foreground">Signed in as</p>
-          <p className="mb-3 text-sm font-medium">{userName}</p>
+          <p className="mt-0.5 text-sm font-medium">{userName}</p>
+          <p className="mt-1 mb-3 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            <CheckCircle2 className="h-3 w-3" />
+            {planBadge ?? "Free"} · {roleLabel}
+          </p>
           <LogoutButton />
         </div>
       </aside>

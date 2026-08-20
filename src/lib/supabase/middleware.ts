@@ -85,6 +85,41 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/onboarding") ||
     request.nextUrl.pathname.startsWith("/api/internal");
 
+  // MFA gate for every account (not just admins): anyone with a verified
+  // authenticator (TOTP) factor must reach AAL2 before using app routes —
+  // covers password, one-time-code, Google, and (later) Microsoft logins,
+  // since an OAuth callback lands with an AAL1 session. Auth pages and the
+  // /mfa challenge page itself are exempt to avoid redirect loops.
+  if (!user.error && user.data.user) {
+    const hasVerifiedFactor = (user.data.user.factors ?? []).some(
+      (f) => f.status === "verified" && f.factor_type === "totp",
+    );
+    const isAuthPage =
+      request.nextUrl.pathname.startsWith("/auth") ||
+      request.nextUrl.pathname.startsWith("/login") ||
+      request.nextUrl.pathname.startsWith("/signup") ||
+      request.nextUrl.pathname.startsWith("/verify-email") ||
+      request.nextUrl.pathname.startsWith("/update-password");
+    const isProtectedAppRequest =
+      request.nextUrl.pathname.startsWith("/dashboard") ||
+      request.nextUrl.pathname.startsWith("/onboarding") ||
+      request.nextUrl.pathname.startsWith("/api/internal");
+    if (hasVerifiedFactor && !isAuthPage && isProtectedAppRequest) {
+      const { data: aalData } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (!aalData || aalData.currentLevel !== "aal2") {
+        const url = request.nextUrl.clone();
+        url.pathname = "/mfa";
+        url.search = "";
+        url.searchParams.set(
+          "next",
+          `${request.nextUrl.pathname}${request.nextUrl.search}`,
+        );
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // Suspended/banned profiles cannot use dashboard pages or internal APIs.
   // Admins bypass this check so an administrator can restore an account.
   if (!user.error && user.data.user && userRole !== "admin" && isProtectedAppRequest) {

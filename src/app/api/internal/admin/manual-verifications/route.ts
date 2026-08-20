@@ -105,6 +105,16 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // A new approved follower count can move the gold badge (1M+) — recompute.
+  if (status === "approved") {
+    try {
+      const { refreshCreatorBadges } = await import("@/lib/badges");
+      await refreshCreatorBadges(verification.creator_id);
+    } catch {
+      /* the daily badges cron reconciles drift */
+    }
+  }
+
   await logAdminAction({
     adminId: admin.id,
     actionType: status === "approved" ? "approve_follower_verification" : "reject_follower_verification",

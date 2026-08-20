@@ -43,7 +43,7 @@ export default async function BusinessDashboard() {
   const planBadge = planSlug.replace("business_", "").replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase());
   const isFree = planSlug === "business_free";
   const campaignsUsed = profile.campaigns_created_this_month || 0;
-  const campaignsMax = isFree ? 3 : planSlug === "business_growth" ? 20 : Infinity;
+  const campaignsMax = isFree ? 3 : planSlug === "business_growth" ? 10 : 25;
 
   const [campaignsRes, applicantsRes, activeCountRes] = await Promise.all([
     supabase

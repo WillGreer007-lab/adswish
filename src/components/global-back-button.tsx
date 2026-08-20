@@ -1,14 +1,30 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 /**
- * Site-wide floating "Back" button shown on every page. Calls router.back();
- * on a fresh tab with no history this is a harmless no-op.
+ * Site-wide floating "Back" button. Only shown when there is actually a
+ * previous page to go back to (fresh tabs / direct visits have nothing), and
+ * never on the landing page or inside the dashboard (which has its own back
+ * button in the top bar).
  */
 export function GlobalBackButton() {
   const router = useRouter();
+  const pathname = usePathname();
+  const [canGoBack, setCanGoBack] = useState(false);
+
+  useEffect(() => {
+    const update = () => setCanGoBack(window.history.length > 1);
+    update();
+    window.addEventListener("popstate", update);
+    return () => window.removeEventListener("popstate", update);
+  }, [pathname]);
+
+  if (pathname === "/" || pathname.startsWith("/dashboard") || !canGoBack) {
+    return null;
+  }
 
   return (
     <button

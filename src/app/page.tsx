@@ -33,32 +33,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AdswishLogo } from "@/components/shared/logo";
+import { IntegrationLogo, type LogoName } from "@/components/dashboard/integration-logos";
 
-const campaignCards = [
-  { type: "Affiliate", badge: "paymentAffiliate" as const, name: "Summer Glow Collection", business: "GlossyCo · 15%", earned: "$12,450", pct: "18.4%", emoji: "💄" },
-  { type: "Fixed", badge: "paymentFixed" as const, name: "Protein Bar Launch", business: "FitFuel · $500", earned: "$8,200", pct: "12.1%", emoji: "🍫" },
-  { type: "Hybrid", badge: "paymentHybrid" as const, name: "Tech Gadget Review", business: "NovaTech · $300+10%", earned: "$24,800", pct: "24.6%", emoji: "📱" },
-  { type: "Affiliate", badge: "paymentAffiliate" as const, name: "Skincare Routine Promo", business: "DewySkin · 20%", earned: "$15,600", pct: "17.2%", emoji: "✨" },
-  { type: "Fixed", badge: "paymentFixed" as const, name: "Coffee Brand Story", business: "BrewCraft · $750", earned: "$6,300", pct: "9.3%", emoji: "☕" },
-  { type: "Hybrid", badge: "paymentHybrid" as const, name: "Fitness App Downloads", business: "MoveMore · $200+15%", earned: "$18,900", pct: "15.7%", emoji: "💪" },
-  { type: "Fixed", badge: "paymentFixed" as const, name: "Gaming Gear Unboxing", business: "PlayGear · $400", earned: "$4,800", pct: "7.2%", emoji: "🎮" },
-  { type: "Affiliate", badge: "paymentAffiliate" as const, name: "Fashion Haul Campaign", business: "StyleHub · 12%", earned: "$22,100", pct: "19.8%", emoji: "👗" },
-  { type: "Hybrid", badge: "paymentHybrid" as const, name: "Home Decor Showcase", business: "CozyHome · $250+8%", earned: "$11,400", pct: "14.3%", emoji: "🛋️" },
-  { type: "Affiliate", badge: "paymentAffiliate" as const, name: "Beauty Box Unboxing", business: "GlamBox · 18%", earned: "$9,200", pct: "11.5%", emoji: "📦" },
-  { type: "Fixed", badge: "paymentFixed" as const, name: "Pet Product Review", business: "PawCo · $350", earned: "$7,100", pct: "8.9%", emoji: "🐶" },
-  { type: "Hybrid", badge: "paymentHybrid" as const, name: "Music App Promotion", business: "BeatApp · $150+12%", earned: "$16,300", pct: "21.1%", emoji: "🎵" },
+const guides = [
+  { eyebrow: "For Creators", title: "Getting your first campaign", desc: "How to set up your profile, connect socials, and start earning.", readTime: "5 min", href: "/guides/creators/getting-started" },
+  { eyebrow: "For Businesses", title: "Launching your first campaign", desc: "From campaign creation to pixel installation to first sale.", readTime: "8 min", href: "/guides/businesses/launching" },
+  { eyebrow: "Engineering", title: "Pixel integration guide", desc: "Install the tracking pixel with GTM, Shopify, or direct embed.", readTime: "12 min", href: "/guides/engineering/pixel-integration" },
+  { eyebrow: "For Businesses", title: "Amplify with Google Ads", desc: "Connect Google Ads, get the developer token, and launch your first amplified campaign.", readTime: "10 min", href: "/guides/businesses/google-ads" },
 ];
 
-const tools = [
-  { icon: Search, name: "Discover", desc: "Search and filter campaigns" },
-  { icon: Video, name: "Lock & Key", desc: "Sequential deliverable slots" },
-  { icon: DollarSign, name: "Escrow", desc: "7-day auto-release holds" },
-  { icon: TrendingUp, name: "Attribution", desc: "Edge-redirected tracking" },
-  { icon: BarChart3, name: "Analytics", desc: "Today/7d/30d dashboards" },
-  { icon: Star, name: "Reviews", desc: "Two-sided rating system" },
-  { icon: MessageSquare, name: "Messaging", desc: "Real-time chat with PII filter" },
-  { icon: ShieldAlert, name: "SLA Engine", desc: "Automated grace periods" },
-  { icon: Percent, name: "Payouts", desc: "Weekly payouts + PDF invoices" },
+const platformIntegrations: { name: string; logo: LogoName }[] = [
+  { name: "Google Ads", logo: "google_ads" },
+  { name: "Meta Ads", logo: "meta_ads" },
+  { name: "TikTok Ads", logo: "tiktok_ads" },
+  { name: "YouTube Ads", logo: "youtube_ads" },
+  { name: "Instagram Ads", logo: "instagram_ads" },
+  { name: "X Ads", logo: "x_ads" },
+  { name: "LinkedIn Ads", logo: "linkedin_ads" },
+  { name: "Pinterest Ads", logo: "pinterest_ads" },
+  { name: "Snapchat Ads", logo: "snapchat_ads" },
+  { name: "Stripe", logo: "stripe" },
+  { name: "Resend", logo: "resend" },
+  { name: "Supabase", logo: "supabase" },
+  { name: "Upstash", logo: "upstash" },
+  { name: "Sightengine", logo: "sightengine" },
 ];
 
 const deepDives = [
@@ -113,12 +111,6 @@ const perks = [
   { icon: MessageSquare, title: "Creator Chat", desc: "Real-time messaging with PII filtering. Negotiate terms without leaving the platform." },
 ];
 
-const guides = [
-  { eyebrow: "For Creators", title: "Getting your first campaign", desc: "How to set up your profile, connect socials, and start earning.", readTime: "5 min", href: "/guides/creators/getting-started" },
-  { eyebrow: "For Businesses", title: "Launching your first campaign", desc: "From campaign creation to pixel installation to first sale.", readTime: "8 min", href: "/guides/businesses/launching" },
-  { eyebrow: "Engineering", title: "Pixel integration guide", desc: "Install the tracking pixel with GTM, Shopify, or direct embed.", readTime: "12 min", href: "/guides/engineering/pixel-integration" },
-];
-
 function useScrollReveal() {
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -158,7 +150,7 @@ function MockupDiscover() {
               <div className="h-2 w-1/2 rounded shimmer" />
               <div className="mt-2 flex items-center justify-between">
                 <Badge variant="paymentAffiliate" className="text-[9px]">Affiliate</Badge>
-                <span className="font-mono text-xs font-bold">$12,450</span>
+                <span className="font-mono text-xs font-bold">—</span>
               </div>
             </div>
           ))}
@@ -231,22 +223,22 @@ function MockupEscrow() {
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-lg bg-payment-fixed/5 border border-payment-fixed/20 p-3 text-center">
             <p className="text-[10px] uppercase text-muted-foreground">Pending</p>
-            <p className="font-mono text-lg font-bold text-payment-fixed">$450</p>
+            <p className="font-mono text-lg font-bold text-payment-fixed">—</p>
           </div>
           <div className="rounded-lg bg-success/5 border border-success/20 p-3 text-center">
             <p className="text-[10px] uppercase text-muted-foreground">Available</p>
-            <p className="font-mono text-lg font-bold text-success">$1,200</p>
+            <p className="font-mono text-lg font-bold text-success">—</p>
           </div>
           <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-center">
             <p className="text-[10px] uppercase text-muted-foreground">Total</p>
-            <p className="font-mono text-lg font-bold text-primary">$1,650</p>
+            <p className="font-mono text-lg font-bold text-primary">—</p>
           </div>
         </div>
         <div className="space-y-2">
           {[
-            { label: "Hold → Sarah K.", amount: "$450.00", status: "Pending", color: "text-payment-fixed" },
-            { label: "Released → Mike R.", amount: "$320.00", status: "Released", color: "text-success" },
-            { label: "Hold → Alex T.", amount: "$130.00", status: "Pending", color: "text-payment-fixed" },
+            { label: "Hold → Creator A", amount: "—", status: "Pending", color: "text-payment-fixed" },
+            { label: "Released → Creator B", amount: "—", status: "Released", color: "text-success" },
+            { label: "Hold → Creator C", amount: "—", status: "Pending", color: "text-payment-fixed" },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between rounded-md border border-border p-2.5">
               <span className="text-xs text-muted-foreground">{item.label}</span>
@@ -286,102 +278,9 @@ function MockupAttribution() {
           <span className="text-[#9cdcfe]">orderId</span>: <span className="text-[#ce9178]">&quot;ORD-4821&quot;</span>,{"\n  "}
           <span className="text-[#9cdcfe]">amount</span>: <span className="text-[#b5cea8]">49.99</span>,{"\n"}
           <span className="text-[#b5cea8]">{`})`}</span>;{"\n\n"}
-          <span className="text-[#6a9955]">{"// > Attribution: @sarah_creates · 15% · $7.50"}</span>
+          <span className="text-[#6a9955]">{"// > Attribution recorded → payout queued"}</span>
         </code>
       </pre>
-    </div>
-  );
-}
-
-const heroCards = [
-  { handle: "@sarah_creates", platform: "instagram", campaign: "GlossyCo Launch", earned: "$12,450", pct: "+18.4%", pos: "left-[2%] top-[40px]", rotate: "-rotate-6" },
-  { handle: "@mikeplays", platform: "youtube", campaign: "FitFuel Promo", earned: "$8,200", pct: "+12.1%", pos: "right-[3%] top-[24px]", rotate: "rotate-3" },
-  { handle: "@nova_tech", platform: "instagram", campaign: "Gadget Review", earned: "$24,800", pct: "+24.6%", pos: "left-[8%] top-[180px]", rotate: "rotate-2" },
-  { handle: "@glamwithgrace", platform: "instagram", campaign: "DewySkin", earned: "$15,600", pct: "+17.2%", pos: "right-[6%] top-[176px]", rotate: "-rotate-3" },
-  { handle: "@thecoffeeguide", platform: "youtube", campaign: "BrewCraft Story", earned: "$6,300", pct: "+9.3%", pos: "left-[0%] top-[292px]", rotate: "rotate-6" },
-  { handle: "@fitchick", platform: "instagram", campaign: "MoveMore App", earned: "$18,900", pct: "+15.7%", pos: "right-[0%] top-[288px]", rotate: "-rotate-6" },
-];
-
-const platformIcon = {
-  instagram: Instagram,
-  youtube: Youtube,
-  tiktok: Music2,
-} as const;
-
-function HeroIllustration() {
-  return (
-    <div aria-hidden="true" className="pointer-events-none relative mx-auto mt-14 h-[360px] w-full max-w-4xl select-none">
-      {/* Funnel: badge at top, widening blue gradient beam down the middle */}
-      <div className="absolute left-1/2 top-0 z-0 -translate-x-1/2">
-        <div className="relative z-10 mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary shadow-[0_8px_30px_rgba(58,92,224,0.35)]">
-          <AdswishLogo wordmark={false} className="h-6 w-6 text-white" />
-        </div>
-        <div
-          className="mx-auto -mt-1 h-[330px] w-72 bg-gradient-to-b from-primary via-primary/70 to-primary/20"
-          style={{ clipPath: "polygon(46% 0, 54% 0, 100% 100%, 0 100%)" }}
-        />
-      </div>
-
-      {/* Floating creator/campaign performance cards */}
-      {heroCards.map((c) => {
-        const Icon = platformIcon[c.platform as keyof typeof platformIcon] ?? Instagram;
-        return (
-          <div
-            key={c.handle}
-            className={`absolute ${c.pos} ${c.rotate} z-20 w-44 rounded-lg border border-border bg-surface p-3 shadow-lg`}
-          >
-            <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">
-                <Icon className="h-4 w-4 text-primary" />
-              </div>
-              <span className="truncate text-xs font-semibold">{c.handle}</span>
-            </div>
-            <p className="mt-2 truncate text-[11px] text-muted-foreground">{c.campaign}</p>
-            <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
-              <span className="font-mono text-sm font-bold">{c.earned}</span>
-              <span className="rounded-full bg-success/10 px-1.5 py-0.5 text-[10px] font-semibold text-success">↗ {c.pct}</span>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Low-opacity skeleton placeholders at the edges — implies more data */}
-      <div className="absolute left-[18%] top-[70px] z-10 w-36 -rotate-6 rounded-lg border border-border bg-muted/40 p-3 opacity-40">
-        <div className="h-3 w-20 rounded bg-muted-foreground/30" />
-        <div className="mt-2 h-2 w-16 rounded bg-muted-foreground/20" />
-        <div className="mt-3 h-3 w-14 rounded bg-muted-foreground/30" />
-      </div>
-      <div className="absolute right-[20%] top-[120px] z-10 w-36 rotate-6 rounded-lg border border-border bg-muted/40 p-3 opacity-30">
-        <div className="h-3 w-20 rounded bg-muted-foreground/30" />
-        <div className="mt-2 h-2 w-16 rounded bg-muted-foreground/20" />
-        <div className="mt-3 h-3 w-14 rounded bg-muted-foreground/30" />
-      </div>
-    </div>
-  );
-}
-
-function CampaignCard({ card }: { card: typeof campaignCards[0] }) {
-  return (
-    <div className="min-w-[240px] flex-shrink-0">
-      <div className="rounded-lg border border-border bg-surface overflow-hidden shadow-sm card-lift">
-        <div className="relative h-28 bg-gradient-to-br from-primary/8 to-primary/3 flex items-center justify-center">
-          <span className="text-4xl">{card.emoji}</span>
-          <span className="absolute top-2 right-2">
-            <Badge variant={card.badge} className="text-[10px]">{card.type}</Badge>
-          </span>
-          <span className="absolute bottom-2 right-2 rounded-full bg-foreground/80 px-2 py-0.5 font-mono text-[10px] font-bold text-background">
-            {card.pct}
-          </span>
-        </div>
-        <div className="p-3.5">
-          <h3 className="font-heading text-sm font-semibold truncate">{card.name}</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground truncate">{card.business}</p>
-          <div className="mt-2.5 border-t border-border pt-2.5">
-            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">Creators earned</p>
-            <p className="font-mono text-base font-bold">{card.earned}</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -389,28 +288,22 @@ function CampaignCard({ card }: { card: typeof campaignCards[0] }) {
 export default function LandingPage() {
   useScrollReveal();
   const perksRef = useRef<HTMLDivElement>(null);
-  const [copied, setCopied] = useState(false);
+  const [activeCampaigns, setActiveCampaigns] = useState(0);
 
-  async function copyPixelSnippet() {
-    try {
-      await navigator.clipboard.writeText(
-        '<script src="https://adswish.com/pixel.js" async></script>'
-      );
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      setCopied(false);
-    }
-  }
+  // Only surface the live-campaigns section once the platform has real scale
+  // (100+ active campaigns) so the homepage never shows fabricated examples.
+  useEffect(() => {
+    fetch("/api/v1/campaigns/count")
+      .then((r) => r.json())
+      .then((d) => setActiveCampaigns(d.active ?? 0))
+      .catch(() => {});
+  }, []);
 
   const scrollPerks = (dir: "left" | "right") => {
     if (!perksRef.current) return;
     const amount = 340;
     perksRef.current.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" });
   };
-
-  const allCards = [...campaignCards, ...campaignCards];
-  const doubledTools = [...tools, ...tools];
 
   return (
     <div className="flex flex-col">
@@ -422,24 +315,6 @@ export default function LandingPage() {
             <span className="font-heading text-xl font-bold tracking-tight text-foreground">adswish</span>
           </Link>
           <div className="hidden items-center gap-8 lg:flex">
-            <div className="nav-dropdown-wrapper relative">
-              <button className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Tools <ChevronDown className="h-3.5 w-3.5" />
-              </button>
-              <div className="nav-dropdown absolute top-full left-0 mt-2 w-64 rounded-lg border border-border bg-surface shadow-lg p-2">
-                {tools.slice(0, 6).map((t) => (
-                  <a key={t.name} href="#tools" className="flex items-center gap-3 rounded-md p-2 hover:bg-muted transition-colors">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg glass-badge">
-                      <t.icon className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.desc}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
             <Link href="/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Creators</Link>
             <Link href="/businesses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Businesses</Link>
             <Link href="/plans" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Plans</Link>
@@ -460,13 +335,13 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative border-b border-border bg-surface overflow-hidden">
-        <div className="mx-auto max-w-5xl px-4 pt-16 pb-0 text-center sm:px-6 lg:px-8 lg:pt-24">
+        <div className="mx-auto max-w-5xl px-4 pt-16 pb-16 text-center sm:px-6 lg:px-8 lg:pt-24 lg:pb-24">
           {/* Status pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface py-1.5 pl-1.5 pr-4">
             <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <AdswishLogo wordmark={false} className="h-4 w-4" />
             </span>
-            <span className="text-sm font-medium text-foreground/80">Adswish 2.0 is live</span>
+            <span className="text-sm font-medium text-foreground/80">Adswish v3 is now live</span>
           </div>
 
           {/* Headline */}
@@ -492,48 +367,23 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          {/* Illustration: funnel + floating creator cards (Zone 5) */}
-          <HeroIllustration />
         </div>
       </section>
 
-      {/* Single-row campaign marquee */}
-      <section className="border-b border-border bg-muted/50 py-10 overflow-hidden">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Example campaigns</h2>
-            <Badge variant="secondary">Demo data</Badge>
+      {/* Live campaigns — only shown once the platform has 100+ active campaigns */}
+      {activeCampaigns >= 100 && (
+        <section id="live-campaigns" className="border-b border-border bg-muted/50 py-16">
+          <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">Live campaigns</h2>
+            <p className="mt-3 text-muted-foreground">See what businesses are running right now.</p>
+            <div className="mt-8 flex justify-center">
+              <Button asChild size="lg" className="rounded-full px-8">
+                <Link href="/creators">Browse live campaigns</Link>
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="relative overflow-hidden">
-          <div className="flex gap-4 marquee-left w-max">
-            {allCards.map((card, i) => <CampaignCard key={`card-${i}`} card={card} />)}
-          </div>
-        </div>
-      </section>
-
-      {/* Tools grid */}
-      <section id="tools" className="border-b border-border py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="fade-in-up">
-            <h2 className="text-center font-heading text-3xl font-bold sm:text-4xl">Adswish tools</h2>
-            <p className="mt-3 text-center text-muted-foreground">Every tool you need to run creator campaigns, all in one account.</p>
-          </div>
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {tools.map((tool, i) => (
-              <div key={tool.name} className="fade-in-up flex items-center gap-3 rounded-lg border border-border bg-surface p-5 card-lift" style={{ transitionDelay: `${i * 50}ms` }}>
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg glass-badge">
-                  <tool.icon className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-heading text-sm font-semibold">{tool.name}</h3>
-                  <p className="text-xs text-muted-foreground">{tool.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Feature deep-dives — alternating like dropship.io */}
       {deepDives.map((feature, idx) => (
@@ -569,6 +419,82 @@ export default function LandingPage() {
           </div>
         </section>
       ))}
+
+      {/* Integrations — powered by the tools you already use */}
+      <section id="integrations" className="border-b border-border bg-muted/30 py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="fade-in-up text-center">
+            <Badge variant="outline" className="mb-3">Integrations</Badge>
+            <h2 className="font-heading text-3xl font-bold sm:text-4xl">
+              Built on the tools you already use
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
+              Every integration in the Adswish ecosystem — connect, amplify, and track
+              across the platforms your audience lives on.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {platformIntegrations.map((item, i) => (
+              <div
+                key={item.name}
+                className="fade-in-up flex flex-col items-center rounded-xl border border-border bg-surface p-5 card-lift"
+                style={{ transitionDelay: `${i * 40}ms` }}
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                  <IntegrationLogo name={item.logo} className="h-7 w-7" />
+                </div>
+                <p className="mt-3 text-center text-sm font-medium">{item.name}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Chrome extension — install in 3 clicks */}
+      <section id="extension" className="border-b border-border py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="fade-in-up mx-auto max-w-2xl text-center">
+            <Badge variant="outline" className="mb-3">
+              <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary"></span>
+              Adswish Tracker — Chrome extension
+            </Badge>
+            <h3 className="font-heading text-2xl font-bold sm:text-3xl">
+              Attribution without touching your site.
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No script tags, no GTM, no developer. Install the extension, connect your
+              business, and conversions get attributed automatically.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
+            {[
+              { step: "1", title: "Install the extension", desc: "Load it from the Chrome Web Store (or unpacked from chrome://extensions in dev)." },
+              { step: "2", title: "Connect your business", desc: "Paste your API URL and Business ID from Settings → Tracking into the extension options." },
+              { step: "3", title: "Track automatically", desc: "It captures your /t/ links, heartbeats your pixel, and fires conversions — zero site code." },
+            ].map((s, i) => (
+              <div key={s.step} className="fade-in-up rounded-lg border border-border bg-surface p-6 card-lift" style={{ transitionDelay: `${i * 80}ms` }}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-heading text-lg font-bold text-primary">
+                  {s.step}
+                </div>
+                <h4 className="mt-4 font-heading text-base font-semibold">{s.title}</h4>
+                <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Button size="sm" className="btn-slide" onClick={() => window.open("https://chrome.google.com/webstore", "_blank")}>
+              Get it on the Chrome Web Store
+            </Button>
+            <Link href="/dashboard/business/tracking">
+              <Button size="sm" variant="outline" className="card-lift">
+                Settings → Tracking
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* How it works */}
       <section id="how-it-works" className="border-b border-border py-20">
@@ -624,117 +550,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Tool icon marquee */}
-      <section className="border-b border-border py-12 overflow-hidden">
-        <div className="relative overflow-hidden">
-          <div className="flex gap-8 marquee-slow w-max">
-            {doubledTools.map((tool, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 min-w-[120px] flex-shrink-0">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl glass-badge card-lift">
-                  <tool.icon className="h-7 w-7 text-primary" />
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">{tool.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pixel + Chrome extension promo — like dropship's extension section */}
-      <section className="border-b border-border py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="fade-in-up flex flex-col items-center justify-between gap-8 rounded-lg border border-border bg-surface p-8 md:flex-row">
-            <div className="max-w-md">
-              <div className="mb-3 flex items-center gap-2">
-                <Badge variant="success">
-                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-success pulse-green"></span>
-                  Pixel active
-                </Badge>
-              </div>
-              <h3 className="font-heading text-xl font-bold">One line of code — or zero.</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Drop the pixel script, GTM container, or Shopify embed on your site — or install the{" "}
-                <strong className="font-medium text-foreground">Adswish Chrome extension</strong> and track
-                conversions with zero site code. Edge-redirected links survive ad blockers either way.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Button size="sm" className="btn-slide" onClick={copyPixelSnippet}>
-                  {copied ? "Copied!" : "Copy snippet"}
-                </Button>
-                <Button asChild size="sm" variant="outline" className="card-lift">
-                  <a href="/adswish-gtm-tag.html" target="_blank" rel="noreferrer">GTM template</a>
-                </Button>
-                <Button asChild size="sm" variant="outline" className="card-lift">
-                  <a href="#extension">Chrome extension</a>
-                </Button>
-              </div>
-            </div>
-            <div className="w-full max-w-sm">
-              <div className="rounded-lg border border-border bg-[#1e1e1e] overflow-hidden">
-                <div className="border-b border-white/10 px-3 py-1.5 flex items-center gap-1.5">
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#ff5f56]" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#ffbd2e]" />
-                  <div className="h-2.5 w-2.5 rounded-full bg-[#27c93f]" />
-                </div>
-                <pre className="p-3 text-xs font-mono leading-relaxed">
-                  <code className="text-white/90">
-                    <span className="text-[#569cd6]">&lt;script</span>{" "}
-                    <span className="text-[#9cdcfe]">src</span>=<span className="text-[#ce9178]">&quot;https://adswish.com/pixel.js&quot;</span>{" "}
-                    <span className="text-[#569cd6]">&gt;&lt;/script&gt;</span>
-                  </code>
-                </pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Chrome extension — install in 3 clicks */}
-      <section id="extension" className="border-b border-border py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="fade-in-up mx-auto max-w-2xl text-center">
-            <Badge variant="outline" className="mb-3">
-              <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-primary"></span>
-              Adswish Tracker — Chrome extension
-            </Badge>
-            <h3 className="font-heading text-2xl font-bold sm:text-3xl">
-              Attribution without touching your site.
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              No script tags, no GTM, no developer. Install the extension, connect your
-              business, and conversions get attributed automatically.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {[
-              { step: "1", title: "Install the extension", desc: "Load it from the Chrome Web Store (or unpacked from chrome://extensions in dev)." },
-              { step: "2", title: "Connect your business", desc: "Paste your API URL and Business ID from Settings → Tracking into the extension options." },
-              { step: "3", title: "Track automatically", desc: "It captures your /t/ links, heartbeats your pixel, and fires conversions — zero site code." },
-            ].map((s, i) => (
-              <div key={s.step} className="fade-in-up rounded-lg border border-border bg-surface p-6 card-lift" style={{ transitionDelay: `${i * 80}ms` }}>
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-heading text-lg font-bold text-primary">
-                  {s.step}
-                </div>
-                <h4 className="mt-4 font-heading text-base font-semibold">{s.title}</h4>
-                <p className="mt-1 text-sm text-muted-foreground">{s.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button size="sm" className="btn-slide" onClick={() => window.open("https://chrome.google.com/webstore", "_blank")}>
-              Get it on the Chrome Web Store
-            </Button>
-            <Link href="/dashboard/business/tracking">
-              <Button size="sm" variant="outline" className="card-lift">
-                Settings → Tracking
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Guides */}
       <section id="guides" className="border-b border-border py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -762,82 +577,6 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Creators marketplace promo */}
-      <section id="creators" className="border-b border-border py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="fade-in-up grid items-center gap-10 lg:grid-cols-2">
-            <div>
-              <Badge variant="outline" className="mb-3">Creator Marketplace</Badge>
-              <h2 className="font-heading text-3xl font-bold sm:text-4xl">Find your perfect creator match.</h2>
-              <p className="mt-4 text-muted-foreground">
-                Browse the Adswish creator directory — filter by tier, niche, and rating, and see
-                verified follower counts from connected YouTube, Instagram, and TikTok channels at a glance.
-              </p>
-              <ul className="mt-6 space-y-3">
-                {[
-                  { title: "Tier badges", desc: "Small, Moderate, and Big creators — know each creator's reach before you apply" },
-                  { title: "Verified channels", desc: "Green checkmarks on platforms with live, refreshable follower counts" },
-                  { title: "Niche filters", desc: "Narrow by category and sort by followers or rating in one click" },
-                ].map((f) => (
-                  <li key={f.title} className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
-                    <div>
-                      <p className="font-medium">{f.title}</p>
-                      <p className="text-sm text-muted-foreground">{f.desc}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="btn-slide">
-                  <Link href="/creators">Browse creators</Link>
-                </Button>
-                <Button asChild size="lg" variant="outline" className="card-lift">
-                  <Link href="/signup?role=creator">Join as a creator</Link>
-                </Button>
-              </div>
-            </div>
-            <div className="fade-in-up">
-              <div className="rounded-lg border border-border bg-surface shadow-sm overflow-hidden">
-                <div className="border-b border-border bg-muted/50 px-4 py-2.5 flex items-center gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-destructive/30" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-warning/30" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-success/30" />
-                  </div>
-                  <span className="ml-2 text-xs text-muted-foreground">adswish.com/creators</span>
-                </div>
-                <div className="grid gap-3 p-5 sm:grid-cols-2">
-                  {[
-                    { name: "Sarah M.", niche: "Fitness • 4.9", tier: "Small", verified: true },
-                    { name: "Jake T.", niche: "Tech • 4.8", tier: "Moderate", verified: true },
-                    { name: "Mia R.", niche: "Beauty • 5.0", tier: "Big", verified: true },
-                    { name: "Leo K.", niche: "Gaming • 4.7", tier: "Moderate", verified: false },
-                  ].map((c) => (
-                    <div key={c.name} className="rounded-lg border border-border p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/15 flex items-center justify-center font-heading text-sm font-bold text-primary">
-                            {c.name.charAt(0)}
-                          </div>
-                          <span className="text-sm font-semibold">{c.name}</span>
-                        </div>
-                        {c.verified && <Badge variant="success" className="text-[9px]">Verified</Badge>}
-                      </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{c.niche}</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <Badge variant="outline" className="text-[9px]">{c.tier}</Badge>
-                        <span className="font-mono text-xs font-bold">12.4k</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -875,7 +614,6 @@ export default function LandingPage() {
             <div>
               <h4 className="text-sm font-semibold">Product</h4>
               <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                <li><a href="#tools" className="hover:text-foreground transition-colors">Tools</a></li>
                 <li><a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a></li>
                 <li><a href="#perks" className="hover:text-foreground transition-colors">Perks</a></li>
               </ul>
@@ -894,6 +632,7 @@ export default function LandingPage() {
                 <li><Link href="/legal/terms" className="hover:text-foreground transition-colors">Terms</Link></li>
                 <li><Link href="/legal/privacy" className="hover:text-foreground transition-colors">Privacy</Link></li>
                 <li><Link href="/legal/subprocessors" className="hover:text-foreground transition-colors">Subprocessors</Link></li>
+                <li><Link href="/legal/changelog" className="hover:text-foreground transition-colors">Changelog</Link></li>
               </ul>
             </div>
           </div>

@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyTrackingJwt } from "@/lib/tracking";
-import { calculateCreatorCut, calculatePlatformFee, escrowHoldExpiresAt } from "@/lib/payout-math";
+import {
+  calculateCreatorCut,
+  calculatePlatformFee,
+  escrowHoldExpiresAt,
+  escrowHoldDaysForPlan,
+  ESCROW_HOLD_DAYS,
+} from "@/lib/payout-math";
 import { getStripeCurrency } from "@/lib/stripe/client";
 
 export type AttributionMethod = "cookie" | "s2s" | "utm_fallback" | "manual";
@@ -76,7 +82,20 @@ export async function recordConversion(
   const amount = Math.round(input.amountDollars * 100) / 100;
   const creatorCut = calculateCreatorCut(amount);
   const platformCut = calculatePlatformFee(amount);
-  const holdExpiresAt = escrowHoldExpiresAt();
+
+  // v3 plan-based hold: Free 7d, Pro 5d, Premium 3d. Falls back to 7 days when
+  // the creator has no active subscription row (or the lookup is unavailable).
+  let holdDays = ESCROW_HOLD_DAYS;
+  if (claims.creatorId) {
+    const { data: sub } = await supabase
+      .from("creator_subscriptions")
+      .select("plan_slug")
+      .eq("creator_id", claims.creatorId)
+      .eq("status", "active")
+      .maybeSingle();
+    holdDays = escrowHoldDaysForPlan(sub?.plan_slug as string | null | undefined);
+  }
+  const holdExpiresAt = escrowHoldExpiresAt(Date.now(), holdDays);
 
   const { data: conversion, error: insertError } = await supabase
     .from("conversions")

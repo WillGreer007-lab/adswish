@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { LogOut, Loader2, AlertTriangle } from "lucide-react";
@@ -9,16 +9,6 @@ export function LogoutButton({ variant = "sidebar" }: { variant?: "sidebar" | "t
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [confirming, setConfirming] = useState(false);
-
-  // Ask before leaving/closing the tab while signed in to the dashboard.
-  useEffect(() => {
-    function handleBeforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, []);
 
   async function handleLogout() {
     setLoading(true);

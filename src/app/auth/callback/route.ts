@@ -5,7 +5,7 @@ import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/onboarding";
+  const nextParam = searchParams.get("next");
   // OAuth sign-ins (e.g. "Continue with Google") can't set user_metadata at
   // sign-in time, so the signup screen passes the chosen role through here.
   const roleParam = searchParams.get("role");
@@ -24,7 +24,59 @@ export async function GET(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error && data.user) {
+    if (error) {
+      const msg = error.message || "This link is invalid or has expired.";
+
+      // PKCE confirmation links carry a one-time code that can only be
+      // exchanged in the browser that requested it (the code verifier lives in
+      // that browser's cookies). Opening the link in a different browser or
+      // device fails here. For confirmation links we know the email from the
+      // link itself, so we can still verify the account server-side and send
+      // the user to log in normally. Recovery links (`next=/update-password`)
+      // need the session, so those keep the error path.
+      const emailParam = searchParams.get("email");
+      const isPkceFailure = /code verifier|PKCE|storage/i.test(msg);
+      if (isPkceFailure && emailParam && nextParam !== "/update-password") {
+        const serviceClient = createSupabaseServiceRoleClient();
+        // The auth schema isn't exposed to PostgREST, so find the user via the
+        // admin API instead of a table query.
+        const { data: page } = await serviceClient.auth.admin.listUsers({
+          page: 1,
+          perPage: 1000,
+        });
+        const target = (page?.users ?? []).find(
+          (u: { email?: string | null }) => u.email?.toLowerCase() === emailParam.toLowerCase(),
+        );
+        if (target && !target.email_confirmed_at) {
+          await serviceClient.auth.admin.updateUserById(target.id, {
+            email_confirm: true,
+          });
+          return NextResponse.redirect(`${origin}/login?confirmed=1`);
+        }
+      }
+
+      // Otherwise surface the real reason (expired/used link, invalid
+      // request…) on the verify-email page, which offers resend — instead of
+      // a dead generic "auth_callback_failed" that looks like the site is
+      // broken.
+      return NextResponse.redirect(
+        `${origin}/verify-email?error=${encodeURIComponent(msg)}`,
+      );
+    }
+
+    if (data.user) {
+      // OAuth providers (Google) already confirmed the email — mark the auth
+      // user confirmed so nothing downstream blocks them on a verification
+      // email they'll never receive. Email-confirmation link callbacks are
+      // excluded: those users arrive already confirmed by the flow itself.
+      const provider = data.user.app_metadata?.provider as string | undefined;
+      if (provider && provider !== "email" && !data.user.email_confirmed_at) {
+        const serviceClient = createSupabaseServiceRoleClient();
+        await serviceClient.auth.admin.updateUserById(data.user.id, {
+          email_confirm: true,
+        });
+      }
+
       const metaRole = data.user.user_metadata?.role as string | undefined;
       let role = metaRole;
       if (!role && (roleParam === "creator" || roleParam === "business")) {
@@ -76,11 +128,33 @@ export async function GET(request: NextRequest) {
         }, { onConflict: "user_id" });
       }
 
+      // Existing users (role already set) go straight to the dashboard;
+      // brand-new users continue into onboarding. Email-confirmation link
+      // callbacks land here too — same rule keeps them out of onboarding.
+      //
+      // Brand-new accounts (created within the last few minutes) first get
+      // the optional authenticator setup step (/auth/setup-mfa) so 2FA can
+      // be enabled during sign-up; that page skips straight to `next` for
+      // anyone who already has a verified factor or declines.
+      const createdAt = data.user.created_at
+        ? new Date(data.user.created_at).getTime()
+        : 0;
+      const isFreshAccount =
+        createdAt > 0 && Date.now() - createdAt < 15 * 60 * 1000;
+      const next =
+        nextParam ||
+        (isFreshAccount
+          ? "/setup-mfa?next=/onboarding"
+          : data.user.app_metadata?.role
+            ? "/dashboard"
+            : "/onboarding");
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+  return NextResponse.redirect(
+    `${origin}/verify-email?error=${encodeURIComponent("This link is invalid or has expired.")}`,
+  );
 }
 
 async function createSupabaseServerClient() {

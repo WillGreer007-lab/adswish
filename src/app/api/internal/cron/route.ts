@@ -6,6 +6,11 @@ import {
   checkCampaignCompletion,
   checkPixelPenalty,
   aggregateDailyRollups,
+  refreshAllBadges,
+  syncGoogleAdsCampaigns,
+  syncGoogleAdsReporting,
+  runGoogleAdsKillSwitch,
+  generateGoogleAdsThumbnails,
 } from "@/lib/background-jobs";
 import {
   releaseExpiredHolds,
@@ -26,7 +31,12 @@ type JobName =
   | "weekly-payouts"
   | "monthly-invoices"
   | "token-refresh"
-  | "daily-rollup";
+  | "daily-rollup"
+  | "badges"
+  | "google-ads-sync"
+  | "google-ads-reporting"
+  | "google-ads-kill-switch"
+  | "google-ads-thumbnails";
 
 const ALL_JOBS: JobName[] = [
   "deadlines",
@@ -69,6 +79,16 @@ async function run(job: JobName): Promise<unknown> {
       return "refreshed";
     case "daily-rollup":
       return `upserted:${await aggregateDailyRollups()}`;
+    case "badges":
+      return `refreshed:${await refreshAllBadges()}`;
+    case "google-ads-sync":
+      return `synced:${await syncGoogleAdsCampaigns()}`;
+    case "google-ads-reporting":
+      return `synced:${await syncGoogleAdsReporting()}`;
+    case "google-ads-kill-switch":
+      return `paused:${await runGoogleAdsKillSwitch()}`;
+    case "google-ads-thumbnails":
+      return `generated:${await generateGoogleAdsThumbnails()}`;
   }
 }
 

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
-import { Bell, Radar, CreditCard, Download, ArrowRight } from "lucide-react";
+import { Bell, Radar, CreditCard, Download, ArrowRight, Clock, ShieldCheck } from "lucide-react";
 import { AppearanceSettings } from "@/components/dashboard/appearance-settings";
 
 export const metadata = { title: "Settings — Adswish" };
@@ -33,6 +33,18 @@ const cards = [
     title: "Download my data",
     desc: "Export your profile, campaigns, messages, reviews, and financial history as JSON.",
     download: true,
+  },
+  {
+    href: "/dashboard/settings/session",
+    icon: Clock,
+    title: "Session timeout",
+    desc: "Auto-logout after inactivity — 1, 5, 10, or 30 minutes.",
+  },
+  {
+    href: "/dashboard/settings/security",
+    icon: ShieldCheck,
+    title: "Security & 2FA",
+    desc: "Two-factor authentication with Google or Microsoft Authenticator.",
   },
 ];
 

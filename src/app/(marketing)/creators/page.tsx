@@ -22,7 +22,7 @@ export default async function CreatorsPage() {
   const { data: creators } = await supabase
     .from("creator_profiles")
     .select(
-      "user_id, display_name, profile_picture_url, bio, tier, niches, average_rating, creator_social_accounts(platform, handle, follower_count, verified_at)",
+      "user_id, display_name, profile_picture_url, bio, tier, niches, average_rating, verified_badge, gold_badge, creator_social_accounts(platform, handle, follower_count, verified_at)",
     )
     .is("deleted_at", null)
     .order("average_rating", { ascending: false })

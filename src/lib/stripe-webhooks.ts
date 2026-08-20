@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeClient } from "@/lib/stripe/client";
-import { escrowHoldExpiresAt } from "@/lib/payout-math";
+import { escrowHoldExpiresAt, escrowHoldDaysForPlan, ESCROW_HOLD_DAYS } from "@/lib/payout-math";
 import { applyRefund, applyChargeback, markChargeFailed } from "@/lib/finance";
 import { creditBalance } from "@/lib/balance";
 import pino from "pino";
@@ -108,19 +108,57 @@ export async function syncSubscription(
     // in place (requires migration 025's unique owner index).
     await supabase.from(table).upsert(payload, { onConflict: idColumn });
   }
+
+  // Plan changes drive the verified (blue) badge — recompute it immediately.
+  if (role === "creator") {
+    try {
+      const { refreshCreatorBadges } = await import("@/lib/badges");
+      await refreshCreatorBadges(userId);
+    } catch {
+      /* badge refresh is best-effort; the daily cron reconciles drift */
+    }
+  }
 }
 
 /** Find a conversion by its Stripe payment intent id. */
 async function findConversionByPaymentIntent(
   supabase: SupabaseClient,
   paymentIntentId: string,
-): Promise<{ id: string; order_amount: number; hold_expires_at: string | null } | null> {
+): Promise<{ id: string; order_amount: number; hold_expires_at: string | null; tracking_link_id: string | null } | null> {
   const { data } = await supabase
     .from("conversions")
-    .select("id, order_amount, hold_expires_at")
+    .select("id, order_amount, hold_expires_at, tracking_link_id")
     .eq("stripe_payment_intent_id", paymentIntentId)
     .single();
-  return (data as { id: string; order_amount: number; hold_expires_at: string | null } | null) ?? null;
+  return (
+    (data as { id: string; order_amount: number; hold_expires_at: string | null; tracking_link_id: string | null } | null) ??
+    null
+  );
+}
+
+/**
+ * Plan-based hold days for a conversion's creator (v3: Free 7d, Pro 5d,
+ * Premium 3d). Falls back to the 7-day default when the link/creator or
+ * subscription row can't be resolved.
+ */
+async function holdDaysForConversionCreator(
+  supabase: SupabaseClient,
+  conversion: { tracking_link_id: string | null },
+): Promise<number> {
+  if (!conversion.tracking_link_id) return ESCROW_HOLD_DAYS;
+  const { data: link } = await supabase
+    .from("tracking_links")
+    .select("creator_id")
+    .eq("id", conversion.tracking_link_id)
+    .single();
+  if (!link?.creator_id) return ESCROW_HOLD_DAYS;
+  const { data: sub } = await supabase
+    .from("creator_subscriptions")
+    .select("plan_slug")
+    .eq("creator_id", link.creator_id)
+    .eq("status", "active")
+    .maybeSingle();
+  return escrowHoldDaysForPlan(sub?.plan_slug as string | null | undefined);
 }
 
 /** Find a conversion by its Stripe transfer id. */
@@ -260,17 +298,19 @@ export async function handleStripeEvent(
       break;
     }
 
-    // A 3DS-queued charge completed: restart the 7-day hold and clear the retry
-    // (no-op for the normal immediate-success path, where the hold is already set).
+    // A 3DS-queued charge completed: restart the plan-based hold and clear the
+    // retry (no-op for the normal immediate-success path, where the hold is
+    // already set).
     case "payment_intent.succeeded": {
       const pi = event.data.object as Stripe.PaymentIntent;
       const conversion = await findConversionByPaymentIntent(supabase, pi.id);
       if (conversion && !conversion.hold_expires_at) {
+        const holdDays = await holdDaysForConversionCreator(supabase, conversion);
         await supabase
           .from("conversions")
           .update({
             status: "pending_hold",
-            hold_expires_at: escrowHoldExpiresAt(),
+            hold_expires_at: escrowHoldExpiresAt(Date.now(), holdDays),
           })
           .eq("id", conversion.id);
         await supabase

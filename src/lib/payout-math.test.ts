@@ -3,6 +3,7 @@ import {
   calculateCreatorCut,
   calculatePlatformFee,
   escrowHoldExpiresAt,
+  escrowHoldDaysForPlan,
   PLATFORM_COMMISSION_RATE,
   ESCROW_HOLD_DAYS,
 } from "./payout-math";
@@ -66,5 +67,24 @@ describe("escrowHoldExpiresAt", () => {
     const after = Date.now();
     expect(expires - ESCROW_HOLD_DAYS * 24 * 60 * 60 * 1000).toBeGreaterThanOrEqual(before);
     expect(expires - ESCROW_HOLD_DAYS * 24 * 60 * 60 * 1000).toBeLessThanOrEqual(after);
+  });
+
+  it("honors an explicit days override (plan-based holds)", () => {
+    expect(new Date(escrowHoldExpiresAt(now, 5)).getTime() - now).toBe(5 * 24 * 60 * 60 * 1000);
+    expect(new Date(escrowHoldExpiresAt(now, 3)).getTime() - now).toBe(3 * 24 * 60 * 60 * 1000);
+  });
+});
+
+describe("escrowHoldDaysForPlan", () => {
+  it("maps creator plans to 7/5/3 days", () => {
+    expect(escrowHoldDaysForPlan("creator_free")).toBe(7);
+    expect(escrowHoldDaysForPlan("creator_pro")).toBe(5);
+    expect(escrowHoldDaysForPlan("creator_premium")).toBe(3);
+  });
+
+  it("falls back to 7 days for unknown or missing plans", () => {
+    expect(escrowHoldDaysForPlan("business_growth")).toBe(7);
+    expect(escrowHoldDaysForPlan(null)).toBe(7);
+    expect(escrowHoldDaysForPlan(undefined)).toBe(7);
   });
 });
