@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { resetAppearance } from "@/lib/appearance";
 
 /**
  * Auto-logout on the browser back/forward button (v3 session security).
@@ -28,6 +29,7 @@ export function BackButtonLogout() {
       try {
         const supabase = createSupabaseBrowserClient();
         await supabase.auth.signOut();
+        resetAppearance();
       } catch {
         /* redirect regardless */
       }

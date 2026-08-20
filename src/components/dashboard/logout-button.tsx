@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { LogOut, Loader2, AlertTriangle } from "lucide-react";
+import { resetAppearance } from "@/lib/appearance";
 
 export function LogoutButton({ variant = "sidebar" }: { variant?: "sidebar" | "topbar" }) {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function LogoutButton({ variant = "sidebar" }: { variant?: "sidebar" | "t
     setLoading(true);
     const supabase = createSupabaseBrowserClient();
     await supabase.auth.signOut();
+    resetAppearance();
     // Full navigation to /login so every protected route re-checks auth.
     router.push("/login");
     router.refresh();

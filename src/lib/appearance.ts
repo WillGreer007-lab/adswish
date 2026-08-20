@@ -65,3 +65,13 @@ export function saveAppearance(a: Appearance) {
   localStorage.setItem(KEYS.layout, a.layout);
   applyAppearance(a);
 }
+
+/** Clear all saved appearance settings and reset the DOM to defaults.
+ *  Called on logout so the landing/login pages always show the default theme. */
+export function resetAppearance() {
+  if (typeof window === "undefined") return;
+  for (const key of Object.values(KEYS)) {
+    localStorage.removeItem(key);
+  }
+  applyAppearance(DEFAULTS);
+}
