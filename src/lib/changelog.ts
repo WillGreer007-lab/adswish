@@ -11,19 +11,7 @@ export type ChangelogEntry = {
  * page and the downloadable PDF both render from this list, so the two can
  * never drift apart.
  */
-export const CHANGELOG: ChangelogEntry[] = [  {
-    version: "v3.5.0",
-    date: "2026-08-22",
-    title: "SocialVerify — campaign verification system",
-    highlights: [
-      "Full SocialVerify campaign verification system: businesses can create verification campaigns, select any combination of YouTube/TikTok/Instagram/Twitter, generate HMAC-signed tokens with 7-day expiry, and track platform verification status with lock/unlock logic.",
-      "No-API authenticity scoring: engagement rate, comment quality, posting consistency, growth velocity, and cross-platform verification scored on a 100-point scale with platform-specific benchmarks — no API keys needed.",
-      "Identity binding with 7 proof methods: domain ownership (DNS TXT/.well-known), bi-directional links, token persistence, video proof challenges, two-way handshake, historical content fingerprint, and social graph analysis.",
-      "Public domain manifest: verified campaigns publish a signed JSON manifest at /.well-known/social-verification.json with only verified accounts, thresholds, and HMAC-SHA256 signature.",
-      "Campaign dashboard UI: 5-step flow (Select Platforms → Tokens → Verify → Audit → Score) with lock banner, token display with copy/expiry countdown, and circular score ring with metric breakdown.",
-    ],
-  },
-
+export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "v3.4.0",
     date: "2026-08-21",

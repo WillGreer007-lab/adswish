@@ -1,37 +1,5 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
-## Latest - SocialVerify campaign verification system (Aug 22, APPLIED)
-
-- **Migration 052 (APPLIED):** three new tables - `verification_campaigns` (per-business
-  campaign with status lifecycle: draft, pending, locked, verified, under_review),
-  `platform_verifications` (per-platform token + follower count + threshold + score),
-  and `verification_campaign_audits` (immutable audit log with overall score, platform
-  results, identity confidence, cross-platform verified flag). All RLS-enabled.
-- **Campaign token system** (`src/lib/verification-token.ts` extended):
-  `generateCampaignToken` produces HMAC-SHA256 signed payload with 7-day expiry,
-  display code `VERIFY-{shortId}-C-{platformCode}-{sig[:8]}`.
-  `verifyCampaignToken` validates signature + expiry.
-  `generateBioCode` produces stateless ADSWISH-XXXXXX ownership code.
-- **Token rotation** (`src/lib/token-rotation.ts`): checks expiry status
-  (active/expiring_soon/warning/expired) + remaining human-readable duration.
-- **Campaign locking** (`src/lib/campaign-verification.ts`): computes campaign status
-  from platform verification states. Thresholds: YT 1K, TT 5K, IG 3K, TW 2.5K.
-- **Authenticity scoring** (`src/lib/authenticity-scoring.ts`): 100-point scale with
-  engagement rate (40pts), comment quality (30pts), consistency (15pts),
-  growth velocity (15pts), cross-platform (10pts). No API keys needed.
-- **Identity binding** (`src/lib/identity-binding.ts`): 7 proof methods including
-  domain ownership, bi-directional links, token persistence, video proof,
-  handshake challenge, historical content, social graph.
-- **Manifest builder** (`src/lib/manifest-builder.ts`): signed JSON manifest
-  at /.well-known/social-verification.json with HMAC-SHA256.
-- **API routes:** campaigns (POST/GET), tokens (POST/GET), check (POST),
-  audit (POST), public manifest (GET).
-- **Dashboard UI:** PlatformSelector, TokenDisplay, LockBanner, ScoreDisplay,
-  5-step campaign page at /dashboard/business/campaigns/verification.
-- **Tests:** 262 total. 6 new test files with 51 new tests.
-- **Verified:** typecheck, lint 0 errors, 262 tests, build, migration 052 APPLIED.
-  NOT pushed.
-
 ## Latest — Public verification audit report (Aug 21, deployed)
 
 - **Migration 051 (APPLIED):** new `verification_audits` table (append-only,
