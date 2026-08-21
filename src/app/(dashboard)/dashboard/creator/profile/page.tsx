@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, CheckCircle2, Crown } from "lucide-react";
+import { Sparkles, CheckCircle2, Crown, ShieldCheck } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { SocialConnections } from "@/components/dashboard/social-connections";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
@@ -125,6 +125,15 @@ export default async function CreatorProfilePage({
         <div className="rounded-lg border border-border bg-surface p-5">
           <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>
           <SocialConnections initial={(socials ?? []) as never} />
+          {(socials ?? []).some((s) => s.verified_at) && (
+            <a
+              href={`/audit/${user.id}`}
+              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              View public verification report
+            </a>
+          )}
         </div>
 
         <ManualFollowerVerification />

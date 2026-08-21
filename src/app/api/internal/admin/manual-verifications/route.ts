@@ -58,7 +58,7 @@ export async function PATCH(request: NextRequest) {
   const service = createSupabaseServiceRoleClient();
   const { data: verification, error: lookupError } = await service
     .from("manual_follower_verifications")
-    .select("id, creator_id, platform, handle, claimed_follower_count, status")
+    .select("id, creator_id, platform, handle, claimed_follower_count, verification_token, status")
     .eq("id", id)
     .single();
   if (lookupError || !verification) return NextResponse.json({ error: "Verification not found" }, { status: 404 });
@@ -109,6 +109,23 @@ export async function PATCH(request: NextRequest) {
         .from("creator_profiles")
         .update({ tier, previous_tier: profile?.tier ?? tier, tier_changed_at: new Date().toISOString() })
         .eq("user_id", verification.creator_id);
+    }
+
+    // Append-only, publicly readable audit trail (one row per approval).
+    // Best-effort: never block an approval on an audit write failure.
+    try {
+      await service.from("verification_audits").insert({
+        creator_id: verification.creator_id,
+        platform: verification.platform,
+        handle: verification.handle,
+        follower_count: followerCount,
+        threshold: 1000,
+        threshold_met: followerCount >= 1000,
+        verification_token_matched: true,
+        tier: tier ?? null,
+      });
+    } catch {
+      /* audit trail is best-effort */
     }
   }
 

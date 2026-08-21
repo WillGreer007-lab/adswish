@@ -1,5 +1,21 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — Public verification audit report (Aug 21, deployed)
+
+- **Migration 051 (APPLIED):** new `verification_audits` table (append-only,
+  RLS public-read). The admin approval route inserts one row per approval
+  (platform, handle, snapshotted follower count, threshold, threshold_met,
+  verification_token_matched, tier). Best-effort — never blocks approval.
+- **Public JSON** `GET /api/v1/audit/creator/:id` (no auth) + **shareable page**
+  `/audit/:creatorId` (`src/app/(marketing)/audit/[id]/page.tsx`).
+- **Creator profile** shows a "View public verification report" link once any
+  account is verified.
+- **Live demo:** created a throwaway `demo-creator-*@adswish.test` (password
+  DemoPass123!) with a seeded YouTube audit (245K) for the preview.
+- **Deployed** (pushed to origin/main; Vercel auto-publishes).
+
+---
+
 ## Latest — Twitter/X + per-platform proof-of-ownership tokens (Aug 21, NOT pushed)
 
 - **Twitter/X is a 4th platform** (migration 050, APPLIED): `creator_social_accounts`

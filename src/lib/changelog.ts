@@ -38,6 +38,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "The manual verification form now states explicitly that a self-typed follower count is never auto-verified — it always requires a screenshot and admin review (or a YouTube ownership code), closing the impersonation gap.",
       "Twitter/X added as a fourth verification platform — token-in-bio + screenshot + admin review with no privileged API, following the existing follower-tier system.",
       "Every manual screenshot verification now issues a per-account proof-of-ownership code: creators post it to their bio and show it in the screenshot, and admins see the expected code so they can confirm the account is real rather than a copy.",
+      "Public verification report: each approval writes an immutable, publicly-readable audit entry — a shareable page at /audit/:creatorId and a no-auth JSON API at /api/v1/audit/creator/:id showing platform, handle, snapshotted follower count, threshold met, and ownership-token match.",
     ],
     fixes: [
       "Fixed password + authenticator login failing with a Bearer-token error: the 2FA challenge now reuses the client that completed the password/OTP step instead of a fresh sessionless client.",
