@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Check, KeyRound, Smartphone, ShieldCheck } from "lucide-react";
-import { GoogleIcon } from "@/components/ui/google-icon";
 import { MicrosoftIcon } from "@/components/ui/oauth-icons";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { cn } from "@/lib/utils";
+import { establishSessionClient } from "@/lib/auth-session";
 
 type Role = "creator" | "business" | null;
 
@@ -182,6 +183,7 @@ function SignupComponent() {
       access_token: json.access_token,
       refresh_token: json.refresh_token,
     });
+    await establishSessionClient(supabase);
     router.push("/onboarding");
     router.refresh();
   }
@@ -343,20 +345,7 @@ function SignupComponent() {
           <span className="text-xs text-muted-foreground">or</span>
           <div className="h-px flex-1 bg-border" />
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={googleLoading}
-        >
-          {googleLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <GoogleIcon className="h-4 w-4" />
-          )}
-          Continue with Google
-        </Button>
+        <GoogleAuthButton loading={googleLoading} onSignIn={handleGoogleSignIn} />
         <div className="relative mt-3 overflow-hidden rounded-md border border-border">
           {/* Coming soon: not clickable until the Azure provider is configured. */}
           <div className="pointer-events-none select-none blur-[3px]" aria-hidden="true">

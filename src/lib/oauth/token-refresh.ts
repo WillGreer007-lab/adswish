@@ -6,7 +6,7 @@ const logger = pino({ name: "token-refresh" });
 interface SocialAccount {
   id: string;
   creator_id: string;
-  platform: "tiktok" | "instagram" | "youtube";
+  platform: "tiktok" | "instagram" | "youtube" | "twitter";
   handle: string;
   access_token: string | null;
   refresh_token: string | null;

@@ -11,6 +11,13 @@ export default async function DashboardRedirect() {
 
   const role = user.user_metadata?.role as string;
 
+  // Team members are businesses invited by an owner; they have no own profile
+  // but carry app_metadata.business_id. Send them to the team profile page.
+  const invitedBusinessId = user.app_metadata?.business_id as string | undefined;
+  if (!role && invitedBusinessId) {
+    redirect("/dashboard/business/profile");
+  }
+
   if (role === "creator") {
     const { data: profile } = await supabase
       .from("creator_profiles")

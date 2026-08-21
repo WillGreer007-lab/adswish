@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStripeCurrency } from "@/lib/stripe/client";
+import { parsePagination, nextCursor } from "@/lib/pagination";
 import {
   evaluateFreePlanCampaignLimit,
   BUSINESS_PLAN_CAMPAIGN_LIMITS,
@@ -303,6 +304,7 @@ export async function GET(request: NextRequest) {
     const minRating = searchParams.get("min_rating");
     const attributionDays = searchParams.get("attribution_days");
     const niche = searchParams.get("niche");
+    const { limit, cursor } = parsePagination(searchParams);
 
     let query = supabase
       .from("campaigns")
@@ -322,12 +324,23 @@ export async function GET(request: NextRequest) {
     if (attributionDays) query = query.eq("attribution_days", Number(attributionDays));
     if (niche) query = query.overlaps("niche", [niche]);
 
+    // Keyset pagination: (created_at, id) < cursor rows, newest first.
+    if (cursor) {
+      query = query.or(
+        `created_at.lt.${cursor.value},and(created_at.eq.${cursor.value},id.lt.${cursor.key})`,
+      );
+    }
+
     const { data: campaigns, error } = await query
       .order("created_at", { ascending: false })
-      .limit(50);
+      .order("id", { ascending: false })
+      .limit(limit);
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ campaigns });
+    return NextResponse.json({
+      campaigns,
+      next_cursor: nextCursor((campaigns ?? []) as unknown as Array<Record<string, unknown>>, limit, "created_at"),
+    });
   }
 
   return NextResponse.json({ error: "Invalid role" }, { status: 400 });

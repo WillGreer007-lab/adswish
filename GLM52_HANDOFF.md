@@ -1,6 +1,396 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
-## Latest — TOTP 2FA, Apple removed, Resend key rotated, landing integrations (Aug 20, NOT pushed)
+## Latest — Twitter/X + per-platform proof-of-ownership tokens (Aug 21, NOT pushed)
+
+- **Twitter/X is a 4th platform** (migration 050, APPLIED): `creator_social_accounts`
+  and `manual_follower_verifications` now accept `twitter`. It follows the existing
+  follower-tier system — verification is token-in-bio + screenshot + admin review,
+  no privileged API. Type unions updated in `follower-recheck.ts`,
+  `oauth/token-refresh.ts`, `social-connections.tsx`, `connect_social`,
+  `manual-follower-verification.tsx`, `manual-verification-review.tsx`, and the
+  manual-verifications + disconnect routes. Twitter has no live re-check
+  (fetchLiveCount returns null — count is set at admin approval).
+- **Per-platform proof-of-ownership token** (`src/lib/verification-token.ts`):
+  `deriveVerificationToken(userId, platform)` → `ADSWISH-XXXXXX` (HMAC of secret +
+  user + platform). `deriveYouTubeChallengeCode` now delegates to it. The manual
+  screenshot flow issues one token per platform: the creator posts it to their bio
+  and shows it in the screenshot; the admin review shows the expected code so a
+  copied account can't pass. `manual_follower_verifications.verification_token`
+  column added (migration 050).
+- **`GET /api/internal/manual-verifications`** now returns a `tokens` map (all 4
+  platforms) so the creator UI can show the code before uploading.
+- **NOT pushed yet** (this turn also covers commit+deploy — see next section).
+
+---
+
+## Latest — YouTube ownership proof, onboarding self-serve, login MFA fix, browser walkthrough (Aug 21, NOT pushed)
+
+- **YouTube ownership proof (no impersonation):** `src/lib/youtube.ts` now
+  exposes `fetchYouTubeChannel` (subscriber count + public About description)
+  and `deriveYouTubeChallengeCode(userId)` (stateless HMAC code, `ADSWISH-XXXXXX`).
+  `POST /api/internal/oauth/youtube/verify` fetches the live description and only
+  auto-verifies when it contains the creator's code — returns 403
+  `{ needs_bio_proof, code }` otherwise. A creator must paste the code into their
+  channel About once. This is the honest answer to "anyone can pretend to be
+  someone else": auto-verify requires proof-of-control, otherwise fall back to
+  screenshot + admin review.
+- **Shared component `src/components/dashboard/youtube-handle-verify.tsx`**
+  (handle input + Verify + inline challenge-code guidance) is used by the
+  dashboard social-connections AND the onboarding connect_social step — new
+  creators verify YouTube during sign-up without OAuth. Onboarding syncs the
+  verified count into the manual form so Continue picks up the auto-verified tier.
+- **Manual form messaging:** a self-typed follower count is NEVER auto-verified;
+  it always needs a screenshot + admin review (or the YouTube code).
+- **Login MFA bug fixed (`login/page.tsx`):** password/OTP + authenticator login
+  was failing with "This endpoint requires a valid Bearer token" because
+  `handleMfaVerify` used a fresh sessionless `probeClient()`. Added `probeRef`
+  so the MFA challenge runs against the client that actually signed in (and it's
+  cleared on Back). Real product bug — 2FA login was broken.
+- **Browser walkthrough `e2e/follower-verification-walkthrough.spec.ts` (3/3):**
+  seeds throwaway creator + admin (admin enrolled in TOTP via API), then drives
+  the REAL UI: creator uploads a screenshot → admin logs in (password + authenticator
+  code) and approves → asserts verified social account + tier=macro in DB.
+  Run headed: `npx playwright test e2e/follower-verification-walkthrough.spec.ts --project=chromium --headed`.
+  (Needs `npx playwright install chromium` once.)
+- **Admin live lookup (`admin/manual-verifications` PATCH):** approving a YouTube
+  screenshot cross-checks the claimed count against a live API lookup by handle.
+- **Verified:** typecheck ✓ · lint 0 errors · 202 unit tests ✓ · build ✓ ·
+  walkthrough 3/3 ✓. **NOT pushed.** `YOUTUBE_API_KEY` is still EMPTY — the
+  self-serve field 422s until the key is pasted (manual-screenshot path works
+  without it).
+
+---
+
+## Latest — No-OAuth YouTube subscriber lookup (Aug 21, NOT pushed)
+
+- **New `src/lib/youtube.ts`:** `fetchYouTubeSubscriberCount(handle)` resolves a
+  public channel's subscriber count via the YouTube Data API v3 with a plain
+  `YOUTUBE_API_KEY` (forHandle, legacy forUsername fallback). No OAuth, no
+  consent screen. Returns null when the key is missing / channel not found.
+- **Follower re-check now uses it:** the YouTube branch of `fetchLiveCount` no
+  longer needs a stored access token — it resolves by handle. The re-check also
+  no longer filters out accounts without an access token, so manual-verified
+  YouTube rows (handle, no token) get live-refreshed monthly. TikTok/Instagram
+  still require their OAuth token and are skipped when absent.
+- **`YOUTUBE_API_KEY` added as an EMPTY placeholder** to `.env.local` +
+  `vercel-env.txt` — paste the Google Cloud API key to activate (the lookup is
+  inert until then).
+- **Tests:** new `src/lib/youtube.test.ts` (4 tests: handle, username fallback,
+  missing key, not found). 198 tests total.
+- **Verified:** typecheck ✓ · lint 0 errors · 198 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Latest — Manual verification smoke test verified (Aug 21, NOT pushed)
+
+- **`scripts/manual-verification-smoke.mjs` (7/7):** proves the zero-OAuth path
+  end-to-end — throwaway creator uploads a screenshot (pending) → throwaway
+  admin approves → `creator_social_accounts` row created + `verified_at` set
+  (1.5M), `creator_profiles.tier` recomputed micro → macro, system notification
+  sent. Cleans up fixtures + the uploaded bucket object.
+- **YouTube:** OAuth connect still can't be exercised (Google consent screen +
+  redirect URI not registered — the original `redirect_uri_mismatch`). BUT
+  YouTube subscriber counts can be fetched WITHOUT OAuth via the YouTube Data
+  API v3 with a plain API key (`channels.list` + `forHandle`). `YOUTUBE_API_KEY`
+  is currently MISSING — if the user creates one, add a no-OAuth YouTube count
+  fetch to the manual-verification/admin path.
+- **Instagram:** `INSTAGRAM_CLIENT_ID/SECRET` still EMPTY; no official public
+  API without Meta app review + OAuth. Third-party scrapers (Apify, Bright Data,
+  Phantombuster) exist but are paid and ToS-gray.
+- **NOT pushed.**
+
+---
+
+## Latest — TikTok Connect removed, manual path is primary (Aug 21, NOT pushed)
+
+- **User decision:** skip TikTok (its dev portal requires domain verification:
+  "This URL is not verified"). TikTok Connect entry points are now removed from
+  the UI so they're not a dead end.
+- **Onboarding `connect_social`:** the "Connect with TikTok" button was replaced
+  by a "Connect with YouTube" button (Instagram button kept); manual-platform
+  default is now Instagram. The TikTok option remains in the manual screenshot
+  form (creators can still submit a TikTok screenshot for admin approval).
+- **Dashboard `social-connections`:** the "Connect TikTok" button is hidden
+  (connected TikTok accounts still show + can be disconnected); empty-state text
+  now points at Instagram/YouTube + manual screenshot verification.
+- **TikTok OAuth routes are left in place** (not deleted) in case the domain is
+  verified later — just no longer linked from the UI.
+- **Manual follower verification is the fully-working path today** (no external
+  OAuth needed): screenshot → Superadmin → Follower Verification → approve.
+  Instagram still needs keys; YouTube still needs the Google consent screen +
+  redirect URI registered.
+- **Verified:** typecheck ✓ · lint 0 errors · 194 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Latest — TikTok smoke test + follower re-check integration test (Aug 21, NOT pushed)
+
+- **Live connect smoke test** `scripts/tiktok-connect-smoke.mjs` (8/8): creates a
+  throwaway creator, signs in, hits `/api/internal/oauth/tiktok`, and asserts a
+  307 to `tiktok.com/v2/auth/authorize` with the right client_key + scope +
+  callback URI; also checks the callback handles `?error=access_denied`.
+- **Follower re-check integration test** `src/lib/follower-recheck.integration.test.ts`
+  (2 tests): runs the real `recheckFollowerCounts` against an in-memory DB + a
+  stubbed TikTok API, proving a live count gets stamped on the social account and
+  the creator's tier + badges refresh (micro → macro); also proves unconfigured
+  TikTok is skipped, not failed. 194 tests total.
+- **TikTok redirect URIs to register** (owner task — I cannot access the TikTok
+  dashboard): local `http://localhost:3000/api/internal/oauth/tiktok/callback` and
+  prod `https://adswish-lake.vercel.app/api/internal/oauth/tiktok/callback`.
+- **Note:** the real TikTok authorize page needs a human login, so the smoke test
+  stops at the redirect into TikTok — the follower/tier side is the integration test.
+- **Verified:** typecheck ✓ · lint 0 errors · 194 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Latest — TikTok keys wired (Aug 21, NOT pushed)
+
+- **TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET are now SET** in both `.env.local`
+  and `vercel-env.txt` (previously empty). This unblocks the whole TikTok path:
+  the OAuth connect route, token refresh, and the monthly follower re-check.
+- **Verified live:** `GET /api/internal/oauth/tiktok` now redirects an
+  unauthenticated request to `/login` (instead of `?error=tiktok_not_configured`),
+  proving the running dev server loaded the new keys.
+- **No creators have connected social accounts yet** (0 rows with an access
+  token), so the follower re-check has nothing to fetch until someone connects —
+  but TikTok will no longer be "skipped — not configured".
+- **Still EMPTY:** INSTAGRAM_CLIENT_ID/SECRET (the follower re-check keeps
+  skipping Instagram until those are pasted).
+- Added generic `scripts/set-env-var.mjs` (KEY VALUE pairs → both env files,
+  never prints values). **NOT pushed.**
+
+---
+
+## Latest — Resume plan, banner everywhere, admin flow test (Aug 21, NOT pushed)
+
+- **Resume canceled plan:** new `resume_plan` admin action + `resumePlanForAccount`
+  helper (in new `src/lib/admin/account-actions.ts`). Restores the local
+  subscription to `active` (features/limits/badges re-apply) and, with the
+  admin's explicit confirm, calls `stripe.subscriptions.update(id, {
+  cancel_at_period_end: false })` for a period-end-canceled sub. `AdminUserActions`
+  shows a "Resume plan" button when the plan status is `canceled`. Migration
+  **049** adds `resume_plan` to the audit-log enum (APPLIED).
+- **Cancel/terminate logic extracted** into `src/lib/admin/account-actions.ts`
+  (`cancelPlanForAccount`, `resumePlanForAccount`, `cancelStripeSubscription`,
+  `resumeStripeSubscription`) so it's unit-testable; the admin users route now
+  calls these helpers.
+- **Paused-payments banner on every page:** `PaymentsPausedBanner` is now a
+  client component reading the user's own `payouts_paused_at` via the browser
+  client and rendered by `DashboardShell`, so it appears on all 28 dashboard
+  pages. (First attempt put the fetch in DashboardShell, which broke the client
+  `discover` page — reverted to a client component that works in both bundles.)
+- **Integration test:** new `src/lib/admin/account-actions.test.ts` (3 tests)
+  drives cancel/resume against an in-memory DB + fake Stripe — proves the local
+  status flip AND that Stripe is only called when the admin confirms. 192 tests.
+- **Verified:** typecheck ✓ · lint 0 errors · 192 tests · build ✓.
+  Migration 049 APPLIED. **NOT pushed.**
+
+---
+
+## Latest — Stripe cancel, payout-pause test + banner (Aug 21, NOT pushed)
+
+- **Stripe-side subscription cancel:** `POST /api/internal/admin/users` now
+  accepts `cancel_stripe: true` for `cancel_plan` / `terminate` and calls
+  `stripe.subscriptions.cancel()` on the stored `stripe_subscription_id`
+  (best-effort — local cancel still proceeds, response reports
+  `stripe_canceled`). `AdminUserActions` adds a second explicit confirm before
+  sending it, so billing only stops when the admin intends it.
+- **Payout-pause guard unit-tested:** extracted `isWeeklyPayoutBlocked(profile,
+  total)` in `src/lib/finance.ts` (used by `processWeeklyPayouts`) and added 5
+  tests in `finance.test.ts` proving a paused account is skipped even when
+  otherwise fully eligible. 189 tests total.
+- **Paused-payments banner:** new `PaymentsPausedBanner` component rendered at
+  the top of the creator + business dashboard overview when
+  `payouts_paused_at` is set on the profile (creator overview now also selects
+  that column).
+- **Verified:** typecheck ✓ · lint 0 errors · 189 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Latest — Admin account management + notification read state (Aug 21, NOT pushed)
+
+- **Per-notification mark-as-read:** `NotificationCenter` no longer auto-marks
+  all unread on open. Each row now has a "Mark read" button and the dropdown
+  header has an explicit "Mark all read" action; the unread badge decrements as
+  items are read individually.
+- **OAuth toggles are audit logged:** `POST /api/internal/admin/oauth-provider`
+  now calls `logAdminAction({ actionType: "toggle_oauth_provider", ... })`.
+- **Admin account management (migration 048, APPLIED):**
+  - Added `payouts_paused_at` / `payouts_paused_by` to both `creator_profiles`
+    and `business_profiles`.
+  - Expanded `admin_audit_logs.action_type` CHECK to add `toggle_oauth_provider`,
+    `cancel_plan`, `terminate_account`, `pause_payments`, `resume_payments`.
+  - Rewrote `POST /api/internal/admin/users` with new actions:
+    `cancel_plan` (sub → canceled), `terminate` (cancel plan + ban + pause
+    payouts), `pause_payments` / `resume_payments` (set/clear the flag). All
+    audit logged + user-notified.
+  - `AdminUserActions` + `/admin/users` now show plan + payments-paused state
+    and expose the new buttons.
+  - **Money-movement guards:** `processWeeklyPayouts` and `releaseConversion`
+    skip creators whose payouts are paused (hold still releases, transfer is
+    withheld); `createDestinationChargeForConversion` refuses to charge a
+    business whose payments are paused.
+- **Verified:** typecheck ✓ · lint 0 errors · 184 tests · build ✓.
+  Migration 048 APPLIED. **NOT pushed.**
+
+---
+
+## Latest — Admin Google enable flow + notification bell confirm (Aug 21, NOT pushed)
+
+- **Google OAuth admin enable flow:** Google is now a runtime feature flag
+  (`app_settings.google_oauth_enabled`, seeded by migration **047**, APPLIED).
+  New shared `GoogleAuthButton` component renders the real button when the flag
+  is "true", otherwise the blurred "Coming soon" tile. Login + signup both use
+  it (the old inline blurred blocks were replaced).
+- **Superadmin control:** new `POST/GET /api/internal/admin/oauth-provider`
+  (admin-gated via `app_metadata.role === "admin"`) toggles the flag through the
+  service role. `OAuthProviderToggle` client component added to the Superadmin
+  dashboard (`/admin`, under a new "OAuth providers" section). Flip it to Enable
+  only AFTER the Google Cloud redirect URI is registered.
+- **Notification bell confirmed already present:** the dashboard header bell
+  (`NotificationCenter` in `dashboard-shell.tsx`) already surfaces the team
+  accept/decline rows (type `system`, unread badge, link to
+  `/dashboard/business/profile`). Verified earlier via `scripts/team-notify-check.mjs`
+  (3/3). No new code was needed — the notifyOwner insert and the bell were both
+  already wired.
+- **Verified:** typecheck ✓ · lint 0 errors · 184 tests · build ✓.
+  Migration 047 APPLIED. **NOT pushed.**
+
+---
+
+## Latest — Team invite email, owner notify, password flow, Google blur (Aug 21, NOT pushed)
+
+- **Owner notification:** team route PATCH (accept/decline) now inserts a
+  `notifications` row (type `system`) for the owner — "<email> accepted/declined
+  your team invitation" — via a new `notifyOwner()` helper. **Verified live**
+  (`scripts/team-notify-check.mjs`, 3/3): invite 201 → member accepts → owner's
+  notifications table shows the accept row.
+- **Invitee password flow:** brand-new invitees are now created with
+  `email_confirm:false` and get a Supabase `admin.generateLink({ type: "invite" })`
+  link embedded in the branded email, so they can set a password and confirm in
+  one step. Existing-user invites keep a password-set link via `type: "recovery"`.
+  Team E2E re-run **10/10** (`scripts/team-e2e.mjs`) with the new flow.
+- **Google sign-in blurred → Coming soon** on both login and signup (matches the
+  existing blurred-Microsoft pattern) — the handler is now disabled/not-reached.
+- **New guide `SOCIAL_KEYS_SETUP.md`:** step-by-step for creating TikTok client
+  key/secret + Instagram (Meta) client ID/secret and pasting them here, since
+  those four env vars are still EMPTY.
+- **Verified:** typecheck ✓ · lint 0 errors · 184 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Latest — Single-session enforcement, dark-mode leak fix (Aug 21, NOT pushed)
+
+- **Single-session enforcement:** every login (password, OTP, OAuth callback, TOTP-login, QR-signup) stamps a random `active_session` id in `user_metadata` and a matching `adswish-session-id` cookie. Middleware compares the two on every protected request — if they differ, a newer login superseded this one and the user is sent to `/session-expired` (masked email + Contact Support button + Sign Out). Works across devices, tabs, and browsers.
+- **Dark-mode leak fixed:** `ThemeProvider` now only applies saved appearance on dashboard pages (`/dashboard/*`, `/onboarding/*`, `/admin/*`). Public pages always render in the default light theme. `resetAppearance()` called on both logout paths (manual + back-button).
+- **Fixed a bug in `handleSubmit` (login):** `establishSessionClient` was called before the Supabase client was created — moved it after `setSession`.
+- **All changes NOT pushed** — waiting for your go-ahead.
+
+---
+
+## Team invite email + env sync (Aug 21, NOT pushed)
+
+- **Team-invite email:** the team invite route now sends a branded Resend email
+  ("X invited you to their Adswish team") via `sendEmail` + the new
+  `teamInviteEmailHtml`. Failure is non-fatal — the pending invite still shows
+  in the dashboard even if Resend is unreachable.
+- **Team E2E verified 9/9** (`scripts/team-e2e.mjs`): throwaway owner+invitee
+  (no 2FA so the middleware MFA gate does not redirect) → invite 201 → pending
+  row (joined_at null) → accept → joined_at set → revoke → row removed.
+  **Note:** the invitee is created with `email_confirm:true` and NO password —
+  they must set one (or use a one-time code) before password login. The accept
+  flow works regardless via the pending-invite banner.
+- **Env sync:** `scripts/sync-env.mjs` copied 7 runtime keys from `.env.local`
+  into `vercel-env.txt` (JWT_SIGNING_SECRET, MESSAGE_ENCRYPTION_KEY,
+  NEXT_PUBLIC_APP_DOMAIN, SUPABASE_JWKS_URL, GOOGLE_OAUTH_*). vercel-env.txt now
+  has 30 entries. Skips management keys (SUPABASE_ACCESS_TOKEN, VERCEL_OIDC_TOKEN).
+- **Still EMPTY (need you to paste values):** TIKTOK_CLIENT_KEY/SECRET,
+  INSTAGRAM_CLIENT_ID/SECRET, CLOUDMERSIVE_API_KEY, AWS_REKOGNITION_*,
+  STRIPE_TAX_API_KEY, STRIPE_WEBHOOK_SECRET_STAGING, PostHog/Sentry (optional).
+- **Verified:** typecheck ✓ · lint 0 errors · 184 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Follower re-check, team seats, asset upload UI (Aug 21, NOT pushed)
+
+- **Campaign asset upload UI:** new `CampaignAssetUpload` component + `uploadCampaignAsset()`
+  helper; wired into `/dashboard/business/campaigns/new` (file picker → preview →
+  uploaded to `/api/internal/campaigns/[id]/asset` after the campaign row is created).
+- **Follower re-check worker (gap 1):** new `src/lib/follower-recheck.ts` with
+  `recheckFollowerCounts()` + `tierForFollowers()`. Re-fetches TikTok/Instagram/YouTube
+  live counts, stamps `creator_social_accounts`, recomputes tier (micro/mid/macro from
+  max connected count) + refreshes badges. **Graceful:** a platform whose keys are
+  empty (TikTok/Instagram currently are) is skipped, never an error. Cron route gains
+  `follower-recheck` job; migration **046** replaced the `SELECT 1` stub with an
+  HTTP dispatch (1st of month 00:00). 4 unit tests added.
+- **Team seats lifecycle (gap 7):** rewrote `/api/internal/team` for the full
+  invite → accept/decline → revoke flow with plan seat-limit enforcement
+  (Growth 2 / Enterprise 5 / Free 1 via `subscription_plans.features.team_seats`).
+  New `TeamManagement` client component (invite form, pending-invite accept/decline,
+  remove buttons) wired into `/dashboard/business/profile`. Dashboard redirect now
+  routes team members (`app_metadata.business_id` without own profile) to the team
+  profile page. No schema change needed (`business_team_members.joined_at` already
+  exists; `null` = pending).
+- **Verified:** typecheck ✓ · lint 0 errors · 184 tests · build ✓.
+  Migration 046 APPLIED. **NOT pushed.**
+
+---
+
+## Blueprint gap closures + UptimeRobot (Aug 21, NOT pushed)
+
+- **UptimeRobot wired:** read-only key `ur3724…` added to `.env.local` +
+  `vercel-env.txt` as `UPTIME_ROBOT_API_KEY` (verified live: 1 monitor,
+  adswish-lake.vercel.app, status up). The monitor-specific key `m80…` is NOT
+  usable by the `getMonitors` endpoint the tracking route calls.
+- **Partition maintenance (gap 2):** migration **042** adds
+  `adswish_ensure_monthly_partitions(months_ahead)` (dynamic SQL, idempotent via
+  to_regclass) and replaces the `create-clicks-partition-monthly` stub with the
+  real call on the 25th. APPLIED; verified 6 partitions exist, cron active.
+- **Account deletion (gap 6):** migrations **043** (nullable review FKs +
+  `deletion_requests` audit table, deny-all RLS) + **044** (review FKs →
+  ON DELETE SET NULL) APPLIED. New `POST /api/internal/account/delete` blocks
+  creators with pending_hold conversions and businesses with balance_cents > 0,
+  GDPR-anonymises reviews (reviewer_id/reviewee_id → NULL, written_feedback → NULL),
+  records `deletion_requests`, then hard-deletes the auth user. Settings page
+  gains a Danger zone card (type-DELETE confirmation) + login `?deleted=1` banner.
+- **Cursor pagination (gap 8):** new `src/lib/pagination.ts` (encode/decode/parse/
+  nextCursor, base64url keyset) + 9 unit tests. Creator campaign discover endpoint
+  now accepts `cursor` + `limit` and returns `next_cursor`.
+- **Campaign assets (gap 3):** migration **045** (public `campaign-assets` bucket +
+  `campaigns.asset_url`) APPLIED. New `POST /api/internal/campaigns/[id]/asset`
+  (owner-scoped, 25MB, image/video allowlist, orphan cleanup).
+- **Verified:** typecheck ✓ · lint 0 errors · 180 tests · build ✓.
+  **NOT pushed.**
+
+---
+
+## Email/Resend status (Aug 21)
+
+- Resend now requires **only the DKIM record** to verify a domain (confirmed in
+  the Resend dashboard — the user sees exactly one record: TXT `resend._domainkey`).
+  MX/SPF/CNAME are optional extras (bounce handling), NOT required to send.
+- **Blocker 1: DKIM record not yet published** — `dig TXT resend._domainkey.adswish.com`
+  returns nothing. User must add the TXT record at their DNS provider (value is in
+  the Resend dashboard, domain id `a9e3bf44-c5b0-4d91-8e36-e53872e19e61`).
+- **Blocker 2: RESEND_API_KEY in `.env.local` is a placeholder** — the file comment
+  says "NOT YET SET" and the Resend API rejects it (HTTP 400). User must create a
+  fresh key at resend.com → API Keys and paste it into `.env.local` + `vercel-env.txt`.
+  (The old key was rotated — the current value is dead.)
+- Added `NEXT_PUBLIC_APP_URL` to both env files: dev = `http://localhost:3000`,
+  prod (vercel-env.txt) = `https://adswish-lake.vercel.app` (update when a custom
+  domain is connected).
+- New helper: `node scripts/email-setup.mjs [recipient@example.com]` — validates the
+  key, lists domains + DNS status, and sends a test email once the domain is verified.
+
+---
+
+## Previous — TOTP 2FA, Apple removed, Resend key rotated, landing integrations (Aug 20, NOT pushed)
 
 - **TOTP two-factor authentication (built + E2E-proven):**
   - Settings → Security & 2FA (`/dashboard/settings/security`, server page with

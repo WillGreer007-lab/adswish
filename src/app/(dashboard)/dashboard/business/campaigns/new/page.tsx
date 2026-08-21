@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Trash2, Save, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CampaignAssetUpload, uploadCampaignAsset } from "@/components/dashboard/campaign-asset-upload";
 
 const NICHES = [
   "Beauty", "Fashion", "Fitness", "Food", "Tech", "Gaming",
@@ -46,6 +47,8 @@ export default function NewCampaignPage() {
     youtube: "",
   });
   const [mediaUrl, setMediaUrl] = useState("");
+  const [assetFile, setAssetFile] = useState<File | null>(null);
+  const [uploadingAsset, setUploadingAsset] = useState(false);
   const [manualReview, setManualReview] = useState(false);
   const [planLimitError, setPlanLimitError] = useState<string | null>(null);
 
@@ -111,6 +114,14 @@ export default function NewCampaignPage() {
       }
       setLoading(false);
       return;
+    }
+
+    // Upload the preview asset (if any) to the just-created campaign.
+    const campaignId: string | undefined = data.campaign?.id;
+    if (campaignId && assetFile) {
+      setUploadingAsset(true);
+      await uploadCampaignAsset(campaignId, assetFile);
+      setUploadingAsset(false);
     }
 
     router.push("/dashboard/business");
@@ -315,8 +326,18 @@ export default function NewCampaignPage() {
             <Label htmlFor="mediaUrl">Preview media URL (image or video, optional)</Label>
             <Input id="mediaUrl" placeholder="https://…/product-preview.jpg or .mp4" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} />
             <p className="text-xs text-muted-foreground">
-              A link creators see when applying — you can also attach assets later.
+              A link creators see when applying.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Upload a preview asset</Label>
+            <CampaignAssetUpload onFile={setAssetFile} />
+            {uploadingAsset && (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading asset…
+              </p>
+            )}
           </div>
 
           <label className="flex items-start gap-3 cursor-pointer">

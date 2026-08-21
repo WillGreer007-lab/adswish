@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Loader2, KeyRound, ShieldCheck, Smartphone } from "lucide-react";
 import { createClient, type AuthError } from "@supabase/supabase-js";
-import { GoogleIcon } from "@/components/ui/google-icon";
+import { establishSessionClient } from "@/lib/auth-session";
 import { MicrosoftIcon } from "@/components/ui/oauth-icons";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 
 function LoginComponent() {
   const router = useRouter();
@@ -29,6 +30,8 @@ function LoginComponent() {
   const timedOut = searchParams.get("timeout") === "1";
   // Email verified server-side after a cross-browser confirmation link.
   const confirmed = searchParams.get("confirmed") === "1";
+  // Account self-deleted → show a confirmation banner.
+  const deleted = searchParams.get("deleted") === "1";
 
   // One-time code (authenticator) sign-in — no password needed.
   const [otpSent, setOtpSent] = useState(false);
@@ -64,6 +67,11 @@ function LoginComponent() {
     });
   }
 
+  // Holds the AAL1 session produced by the credential step (password / OTP) so
+  // the MFA challenge can run against the SAME client. A fresh sessionless
+  // client can't challenge — Supabase rejects it with a Bearer-token error.
+  const probeRef = useRef<ReturnType<typeof probeClient> | null>(null);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -71,6 +79,7 @@ function LoginComponent() {
 
     const probe = probeClient();
     const { data, error } = await probe.auth.signInWithPassword({ email, password });
+    if (!error && data.session) probeRef.current = probe;
 
     if (error) {
       if (error.code === "mfa_verification_required") {
@@ -118,6 +127,7 @@ function LoginComponent() {
       return;
     }
 
+    await establishSessionClient(supabase);
     router.push(redirectTo);
     router.refresh();
   }
@@ -129,7 +139,7 @@ function LoginComponent() {
     setMfaLoading(true);
     setError(null);
 
-    const probe = probeClient();
+    const probe = probeRef.current ?? probeClient();
     const { data: challenge, error: challengeError } = await probe.auth.mfa.challenge({
       factorId: mfaFactorId,
     });
@@ -161,6 +171,7 @@ function LoginComponent() {
       return;
     }
 
+    await establishSessionClient(supabase);
     router.push(redirectTo);
     router.refresh();
   }
@@ -191,6 +202,7 @@ function LoginComponent() {
       access_token: json.access_token,
       refresh_token: json.refresh_token,
     });
+    await establishSessionClient(supabase);
     router.push(redirectTo);
     router.refresh();
   }
@@ -267,6 +279,7 @@ function LoginComponent() {
       token: otpCode.trim(),
       type: "email",
     });
+    if (data?.session) probeRef.current = probe;
     setOtpLoading(false);
     if (error) {
       if (error.code === "mfa_verification_required") {
@@ -298,6 +311,7 @@ function LoginComponent() {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       });
+      await establishSessionClient(supabase);
     }
     router.push("/onboarding");
     router.refresh();
@@ -318,6 +332,12 @@ function LoginComponent() {
           <div className="mb-4 flex items-start gap-2 rounded-md border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
             <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>Your email is verified — you can log in now.</span>
+          </div>
+        )}
+        {deleted && (
+          <div className="mb-4 flex items-start gap-2 rounded-md border border-success/30 bg-success/5 px-4 py-3 text-sm text-success">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <span>Your account has been deleted. Thanks for using Adswish.</span>
           </div>
         )}
         {mfaRequired ? (
@@ -360,6 +380,7 @@ function LoginComponent() {
                   setMfaRequired(false);
                   setMfaCode("");
                   setError(null);
+                  probeRef.current = null;
                 }}
               >
                 Back
@@ -441,20 +462,7 @@ function LoginComponent() {
           <span className="text-xs text-muted-foreground">or</span>
           <div className="h-px flex-1 bg-border" />
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogleSignIn}
-          disabled={googleLoading}
-        >
-          {googleLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <GoogleIcon className="h-4 w-4" />
-          )}
-          Continue with Google
-        </Button>
+        <GoogleAuthButton loading={googleLoading} onSignIn={handleGoogleSignIn} />
         <div className="mt-3">
           <div className="relative overflow-hidden rounded-md border border-border">
             {/* Coming soon: not clickable until the Azure provider is configured. */}

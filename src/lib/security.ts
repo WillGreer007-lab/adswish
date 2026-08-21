@@ -5,7 +5,7 @@ const PII_PATTERNS = [
   { type: "phone", regex: /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3,4}[-.\s]?\d{4}/g },
   {
     type: "url",
-    regex: /https?:\/\/(?!.*(tiktok\.com|instagram\.com|youtube\.com|adswish\.com))[^\s]+/g,
+    regex: /https?:\/\/(?!.*(tiktok\.com|instagram\.com|youtube\.com|twitter\.com|x\.com|adswish\.com))[^\s]+/g,
   },
 ];
 
@@ -13,6 +13,8 @@ const WHITELISTED_DOMAINS = [
   "tiktok.com",
   "instagram.com",
   "youtube.com",
+  "twitter.com",
+  "x.com",
   "adswish.com",
 ];
 

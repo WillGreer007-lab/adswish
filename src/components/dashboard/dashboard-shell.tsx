@@ -22,6 +22,7 @@ import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BackButton } from "@/components/dashboard/back-button";
 import { SessionTimeoutGuard } from "@/components/dashboard/session-timeout-guard";
 import { BackButtonLogout } from "@/components/dashboard/back-button-logout";
+import { PaymentsPausedBanner } from "@/components/dashboard/payments-paused-banner";
 
 const CREATOR_NAV = [
   { label: "Overview", href: "/dashboard/creator", icon: LayoutDashboard },
@@ -125,7 +126,10 @@ export function DashboardShell({
 
         {/* Content */}
         <main className="flex-1 p-4 md:p-8">
-          <div className="dashboard-content mx-auto max-w-6xl">{children}</div>
+          <div className="dashboard-content mx-auto max-w-6xl">
+            <PaymentsPausedBanner role={role} userId={userId} />
+            {children}
+          </div>
         </main>
       </div>
     </div>

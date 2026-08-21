@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const platform = body?.platform as string | undefined;
-  if (!platform || !["tiktok", "instagram", "youtube"].includes(platform)) {
+  if (!platform || !["tiktok", "instagram", "youtube", "twitter"].includes(platform)) {
     return NextResponse.json({ error: "Invalid platform" }, { status: 422 });
   }
 

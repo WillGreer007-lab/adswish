@@ -82,6 +82,13 @@ export function NotificationCenter({ userId }: { userId: string }) {
     setUnreadCount(0);
   }
 
+  async function markRead(id: string) {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.from("notifications").update({ read: true }).eq("id", id).eq("user_id", userId);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+  }
+
   const typeColors: Record<string, string> = {
     payment: "text-success",
     application: "text-primary",
@@ -95,7 +102,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
   return (
     <div className="relative">
       <button
-        onClick={() => { setOpen(!open); if (!open && unreadCount > 0) markAllRead(); }}
+        onClick={() => setOpen(!open)}
         className="relative rounded-md p-2 hover:bg-muted"
         aria-label="Notifications"
       >
@@ -109,8 +116,17 @@ export function NotificationCenter({ userId }: { userId: string }) {
 
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-lg border border-border bg-surface shadow-lg">
-          <div className="border-b border-border px-4 py-3">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <p className="font-heading text-sm font-semibold">Notifications</p>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={markAllRead}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Mark all read
+              </button>
+            )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -122,21 +138,32 @@ export function NotificationCenter({ userId }: { userId: string }) {
               </div>
             ) : (
               notifications.map((n) => (
-                <a
+                <div
                   key={n.id}
-                  href={n.link || "#"}
                   className={cn(
-                    "flex flex-col gap-1 border-b border-border px-4 py-3 transition-colors hover:bg-muted/50",
+                    "flex items-start gap-2 border-b border-border px-4 py-3 transition-colors hover:bg-muted/50",
                     !n.read && "bg-primary/5",
                   )}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className={cn("h-2 w-2 rounded-full", typeColors[n.type] || "bg-muted")} style={{ backgroundColor: "currentColor" }} />
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{n.type.replace("_", " ")}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{timeAgo(n.created_at)}</span>
-                  </div>
-                  <p className="text-sm text-foreground">{n.body}</p>
-                </a>
+                  <a href={n.link || "#"} className="flex min-w-0 flex-1 flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("h-2 w-2 rounded-full", typeColors[n.type] || "bg-muted")} style={{ backgroundColor: "currentColor" }} />
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{n.type.replace("_", " ")}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">{timeAgo(n.created_at)}</span>
+                    </div>
+                    <p className="text-sm text-foreground">{n.body}</p>
+                  </a>
+                  {!n.read && (
+                    <button
+                      type="button"
+                      onClick={() => markRead(n.id)}
+                      className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10"
+                      aria-label="Mark as read"
+                    >
+                      Mark read
+                    </button>
+                  )}
+                </div>
               ))
             )}
           </div>

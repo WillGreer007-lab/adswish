@@ -21,6 +21,31 @@ export function shouldPayout(balanceDollars: number, taxFormStatus: string): boo
   return balanceDollars >= MIN_PAYOUT_DOLLARS && taxFormStatus === "approved";
 }
 
+/** The profile shape the weekly payout job needs to decide eligibility. */
+export interface WeeklyPayoutProfile {
+  tax_form_status: string;
+  stripe_account_id: string | null;
+  stripe_connect_ready: boolean;
+  payouts_paused_at: string | null;
+}
+
+/**
+ * Whether the weekly payout job must skip a creator. A paused-payments account
+ * is always blocked — even when otherwise fully eligible (tax form approved,
+ * Connect ready, over the $25 minimum) — so no Stripe transfer is created
+ * until an admin resumes payments.
+ */
+export function isWeeklyPayoutBlocked(
+  profile: WeeklyPayoutProfile | null,
+  totalDollars: number,
+): boolean {
+  if (!profile) return true;
+  if (profile.payouts_paused_at) return true;
+  if (!shouldPayout(totalDollars, profile.tax_form_status)) return true;
+  if (!profile.stripe_account_id || !profile.stripe_connect_ready) return true;
+  return false;
+}
+
 /**
  * Split a total order into the creator's kept portion and the business refund
  * when only some deliverables were approved. Mirrors the blueprint example:
@@ -126,11 +151,13 @@ export async function releaseConversion(conversionId: string): Promise<boolean> 
   if (!transferId && link?.creator_id) {
     const { data: profile } = await supabase
       .from("creator_profiles")
-      .select("stripe_account_id, stripe_connect_ready")
+      .select("stripe_account_id, stripe_connect_ready, payouts_paused_at")
       .eq("user_id", link.creator_id)
       .single();
 
-    if (profile?.stripe_account_id && profile.stripe_connect_ready) {
+    // Pause payments: the hold still releases (money is owed), but the Stripe
+    // transfer is withheld until an admin resumes payouts.
+    if (profile?.stripe_account_id && profile.stripe_connect_ready && !profile.payouts_paused_at) {
       try {
         const stripe = getStripeClient();
         const transfer = await stripe.transfers.create({
@@ -400,9 +427,15 @@ export async function createDestinationChargeForConversion(conversionId: string)
 
   const { data: business } = await supabase
     .from("business_profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, payouts_paused_at")
     .eq("user_id", campaign?.business_id ?? "")
     .single();
+
+  // Pause payments: never charge a business whose payments are paused.
+  if (business?.payouts_paused_at) {
+    await markChargeFailed(conversionId, "Business payments are paused by an administrator.");
+    return false;
+  }
 
   if (!business?.stripe_customer_id) {
     await markChargeFailed(conversionId, "Business has no Stripe customer on file.");
@@ -603,19 +636,14 @@ export async function processWeeklyPayouts(): Promise<number> {
   for (const [creatorId, entry] of balances.entries()) {
     const { data: profile } = await supabase
       .from("creator_profiles")
-      .select("tax_form_status, stripe_account_id, stripe_connect_ready")
+      .select("tax_form_status, stripe_account_id, stripe_connect_ready, payouts_paused_at")
       .eq("user_id", creatorId)
       .single();
 
-    if (
-      !profile ||
-      !shouldPayout(entry.total, profile.tax_form_status) ||
-      !profile.stripe_account_id ||
-      !profile.stripe_connect_ready
-    ) {
+    if (isWeeklyPayoutBlocked(profile, entry.total)) {
       logger.info(
         { creatorId, total: entry.total },
-        "Creator skipped: below minimum, tax form not approved, or Connect not ready",
+        "Creator skipped: payments paused, below minimum, tax form not approved, or Connect not ready",
       );
       continue;
     }

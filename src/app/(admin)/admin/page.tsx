@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Users, AlertTriangle, ShieldAlert, FileText, Activity, Gavel, BadgeCheck } from "lucide-react";
 import Link from "next/link";
+import { OAuthProviderToggle } from "@/components/admin/oauth-provider-toggle";
 
 export default async function AdminDashboard() {
   const supabase = await createSupabaseServerClient();
@@ -160,6 +161,11 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </Link>
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="font-heading text-lg font-semibold text-background">OAuth providers</h2>
+        <OAuthProviderToggle />
       </div>
     </div>
   );

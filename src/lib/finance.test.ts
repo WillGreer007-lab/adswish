@@ -3,6 +3,8 @@ import {
   MIN_PAYOUT_DOLLARS,
   shouldPayout,
   partialRefundSplit,
+  isWeeklyPayoutBlocked,
+  type WeeklyPayoutProfile,
 } from "@/lib/finance";
 
 describe("shouldPayout", () => {
@@ -19,6 +21,44 @@ describe("shouldPayout", () => {
 
   it("exposes the documented $25 threshold", () => {
     expect(MIN_PAYOUT_DOLLARS).toBe(25);
+  });
+});
+
+describe("isWeeklyPayoutBlocked", () => {
+  const eligible: WeeklyPayoutProfile = {
+    tax_form_status: "approved",
+    stripe_account_id: "acct_1",
+    stripe_connect_ready: true,
+    payouts_paused_at: null,
+  };
+
+  it("blocks a paused account even when otherwise fully eligible", () => {
+    const paused: WeeklyPayoutProfile = {
+      ...eligible,
+      payouts_paused_at: "2026-08-21T00:00:00.000Z",
+    };
+    expect(isWeeklyPayoutBlocked(paused, 100)).toBe(true);
+  });
+
+  it("allows a fully eligible, unpaused account", () => {
+    expect(isWeeklyPayoutBlocked(eligible, 100)).toBe(false);
+  });
+
+  it("blocks a null profile", () => {
+    expect(isWeeklyPayoutBlocked(null, 100)).toBe(true);
+  });
+
+  it("blocks below the $25 minimum", () => {
+    expect(isWeeklyPayoutBlocked(eligible, 24.99)).toBe(true);
+  });
+
+  it("blocks a missing Connect account", () => {
+    expect(
+      isWeeklyPayoutBlocked({ ...eligible, stripe_account_id: null }, 100),
+    ).toBe(true);
+    expect(
+      isWeeklyPayoutBlocked({ ...eligible, stripe_connect_ready: false }, 100),
+    ).toBe(true);
   });
 });
 

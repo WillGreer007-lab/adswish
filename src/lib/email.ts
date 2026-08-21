@@ -46,6 +46,14 @@ export function campaignClosedEmailHtml(title: string, ctaHref: string): string 
   );
 }
 
+export function teamInviteEmailHtml(companyName: string, ctaHref: string): string {
+  return wrapHtml(
+    "You've been invited to a team on Adswish 👋",
+    `<strong>${companyName}</strong> invited you to join their team. Set your password to accept the invite and start working on their campaigns.`,
+    { label: "Set your password", href: ctaHref },
+  );
+}
+
 export async function sendEmail(opts: {
   to: string;
   subject: string;

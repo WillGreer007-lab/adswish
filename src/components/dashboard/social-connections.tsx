@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import { Loader2, Instagram, Youtube, Music2, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { YouTubeHandleVerify } from "@/components/dashboard/youtube-handle-verify";
+import { TwitterIcon } from "@/components/ui/oauth-icons";
 
 type SocialAccount = {
   id: string;
-  platform: "tiktok" | "instagram" | "youtube";
+  platform: "tiktok" | "instagram" | "youtube" | "twitter";
   handle: string;
   follower_count: number | null;
   verified_at: string | null;
 };
 
-const PLATFORMS: { id: "tiktok" | "instagram" | "youtube"; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+const PLATFORMS: { id: "tiktok" | "instagram" | "youtube" | "twitter"; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: "tiktok", label: "TikTok", Icon: Music2 },
   { id: "instagram", label: "Instagram", Icon: Instagram },
   { id: "youtube", label: "YouTube", Icon: Youtube },
+  { id: "twitter", label: "Twitter/X", Icon: TwitterIcon },
 ];
 
 export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
@@ -27,14 +30,14 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function startConnect(platform: "tiktok" | "instagram" | "youtube") {
+  function startConnect(platform: "tiktok" | "instagram" | "youtube" | "twitter") {
     setConnecting(platform);
     setError(null);
     // Full-page navigation (provider consent flow) — same pattern as onboarding.
     window.location.assign(`/api/internal/oauth/${platform}?redirect_to=${encodeURIComponent("/dashboard/creator/profile")}`);
   }
 
-  async function disconnect(platform: "tiktok" | "instagram" | "youtube") {
+  async function disconnect(platform: "tiktok" | "instagram" | "youtube" | "twitter") {
     setDisconnecting(platform);
     setError(null);
     try {
@@ -62,22 +65,51 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
       <div className="mb-3 flex flex-wrap gap-2">
         {PLATFORMS.map(({ id, label, Icon }) => {
           const connected = accounts.some((a) => a.platform === id);
-          return connected ? (
-            <div key={id} className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-sm">
-              <Icon className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">{label}</span>
-              <button
-                type="button"
-                onClick={() => disconnect(id)}
-                disabled={disconnecting === id}
-                className="ml-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
-                aria-label={`Disconnect ${label}`}
-              >
-                {disconnecting === id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
-                Disconnect
-              </button>
-            </div>
-          ) : (
+          if (connected) {
+            return (
+              <div key={id} className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-sm">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{label}</span>
+                <button
+                  type="button"
+                  onClick={() => disconnect(id)}
+                  disabled={disconnecting === id}
+                  className="ml-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
+                  aria-label={`Disconnect ${label}`}
+                >
+                  {disconnecting === id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+                  Disconnect
+                </button>
+              </div>
+            );
+          }
+          // TikTok + Twitter/X Connect are disabled — use the token-in-bio +
+          // screenshot path instead (no privileged API needed).
+          if (id === "tiktok" || id === "twitter") return null;
+          if (id === "youtube") {
+            // YouTube is self-serve with an ownership proof (challenge code in
+            // the channel About) — no OAuth consent screen, no screenshot/admin.
+            return (
+              <div key={id} className="flex items-center gap-2">
+                <YouTubeHandleVerify
+                  onVerified={(account) => {
+                    setAccounts((prev) => [
+                      ...prev.filter((a) => a.platform !== "youtube"),
+                      {
+                        id: `youtube-${Date.now()}`,
+                        platform: "youtube",
+                        handle: account.handle,
+                        follower_count: account.follower_count,
+                        verified_at: new Date().toISOString(),
+                      },
+                    ]);
+                    router.refresh();
+                  }}
+                />
+              </div>
+            );
+          }
+          return (
             <Button
               key={id}
               type="button"
@@ -99,8 +131,8 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
 
       {accounts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No social accounts connected yet. Connect TikTok, Instagram, or YouTube to verify your follower
-          count and unlock creator tiers.
+          No social accounts connected yet. Paste your YouTube handle above to verify instantly,
+          connect Instagram, or upload a screenshot for manual verification.
         </p>
       ) : (
         <div className="space-y-2">

@@ -13,7 +13,13 @@ export async function logAdminAction(params: {
     | "reject_follower_verification"
     | "resolve_dispute"
     | "manual_strike"
-    | "override_rating";
+    | "override_rating"
+    | "toggle_oauth_provider"
+    | "cancel_plan"
+    | "resume_plan"
+    | "terminate_account"
+    | "pause_payments"
+    | "resume_payments";
   targetEntityId?: string;
   metadata?: Record<string, unknown>;
 }) {

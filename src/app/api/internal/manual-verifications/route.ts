@@ -4,11 +4,13 @@ import {
   createSupabaseServerClient,
   createSupabaseServiceRoleClient,
 } from "@/lib/supabase/server";
+import { deriveVerificationToken } from "@/lib/verification-token";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const PLATFORMS = new Set(["tiktok", "instagram", "youtube"]);
+const PLATFORMS = new Set(["tiktok", "instagram", "youtube", "twitter"]);
+const ALL_PLATFORMS = ["tiktok", "instagram", "youtube", "twitter"] as const;
 const TYPES = new Map([
   ["image/png", "png"],
   ["image/jpeg", "jpg"],
@@ -47,13 +49,20 @@ export async function GET() {
   const service = createSupabaseServiceRoleClient();
   const { data, error: queryError } = await service
     .from("manual_follower_verifications")
-    .select("id, platform, handle, claimed_follower_count, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at")
+    .select("id, platform, handle, claimed_follower_count, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at, verification_token")
     .eq("creator_id", user.id)
     .order("created_at", { ascending: false });
 
   if (queryError) return NextResponse.json({ error: queryError.message }, { status: 500 });
   const verifications = await Promise.all((data ?? []).map((row: any) => withSignedUrl(service, row)));
-  return NextResponse.json({ verifications });
+
+  // Per-platform proof-of-ownership tokens so the creator can post one to their
+  // bio BEFORE uploading the screenshot.
+  const tokens = Object.fromEntries(
+    ALL_PLATFORMS.map((p) => [p, deriveVerificationToken(user.id, p)]),
+  );
+
+  return NextResponse.json({ verifications, tokens });
 }
 
 export async function POST(request: NextRequest) {
@@ -105,6 +114,7 @@ export async function POST(request: NextRequest) {
 
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
 
+  const verificationToken = deriveVerificationToken(user.id, platform);
   const { data: verification, error: upsertError } = await service
     .from("manual_follower_verifications")
     .upsert(
@@ -113,6 +123,9 @@ export async function POST(request: NextRequest) {
         platform,
         handle,
         claimed_follower_count: followerCount,
+        // Proof-of-ownership token the creator must post to their bio; shown in
+        // the screenshot so the admin can confirm the account is really theirs.
+        verification_token: verificationToken,
         // Kept populated for compatibility with the original schema. The real
         // object location is storage_path in the private bucket.
         screenshot_url: storagePath,
@@ -124,7 +137,7 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "creator_id,platform" },
     )
-    .select("id, platform, handle, claimed_follower_count, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at")
+    .select("id, platform, handle, claimed_follower_count, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at, verification_token")
     .single();
 
   if (upsertError) {

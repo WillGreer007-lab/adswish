@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { isSuperseded, SESSION_COOKIE } from "@/lib/auth-session";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
@@ -41,6 +42,34 @@ export async function updateSession(request: NextRequest) {
   );
 
   const user = await supabase.auth.getUser();
+
+  // Single-session enforcement: if another device/tab logged in more
+  // recently, this session is superseded. Exempt the session-expired
+  // page itself, auth pages, and the callback to avoid redirect loops.
+  if (
+    !user.error &&
+    user.data.user &&
+    !request.nextUrl.pathname.startsWith("/session-expired") &&
+    !request.nextUrl.pathname.startsWith("/login") &&
+    !request.nextUrl.pathname.startsWith("/signup") &&
+    !request.nextUrl.pathname.startsWith("/auth") &&
+    !request.nextUrl.pathname.startsWith("/verify-email") &&
+    !request.nextUrl.pathname.startsWith("/update-password") &&
+    !request.nextUrl.pathname.startsWith("/mfa") &&
+    (request.nextUrl.pathname.startsWith("/dashboard") ||
+      request.nextUrl.pathname.startsWith("/onboarding") ||
+      request.nextUrl.pathname.startsWith("/admin") ||
+      request.nextUrl.pathname.startsWith("/api/internal"))
+  ) {
+    const cookieVal = request.cookies.get(SESSION_COOKIE)?.value;
+    const activeSession = user.data.user.user_metadata?.active_session as string | undefined;
+    if (isSuperseded(cookieVal, activeSession)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/session-expired";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
   if (request.nextUrl.pathname.startsWith("/admin")) {
     if (user.error || !user.data.user) {

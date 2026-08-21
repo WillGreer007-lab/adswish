@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { logAdminAction } from "@/lib/admin/audit-log";
 import { getCreatorTier } from "@/lib/tier";
+import { fetchYouTubeSubscriberCount } from "@/lib/youtube";
 
 const BUCKET = "creator-verification";
 
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
   const status = new URL(request.url).searchParams.get("status");
   let query = service
     .from("manual_follower_verifications")
-    .select("id, creator_id, platform, handle, claimed_follower_count, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at, creator_profiles(display_name, profile_picture_url)")
+    .select("id, creator_id, platform, handle, claimed_follower_count, verification_token, screenshot_url, storage_path, status, review_notes, reviewed_at, created_at, updated_at, creator_profiles(display_name, profile_picture_url)")
     .order("created_at", { ascending: true });
   if (status) query = query.eq("status", status);
 
@@ -69,7 +70,13 @@ export async function PATCH(request: NextRequest) {
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
   if (status === "approved") {
-    const followerCount = Number(verification.claimed_follower_count ?? 0);
+    let followerCount = Number(verification.claimed_follower_count ?? 0);
+    // YouTube: cross-check the screenshot claim against a live lookup by handle
+    // (plain API key, no OAuth) so the verified count is real, not self-reported.
+    if (verification.platform === "youtube") {
+      const live = await fetchYouTubeSubscriberCount(verification.handle);
+      if (live !== null) followerCount = live;
+    }
     const { error: socialError } = await service
       .from("creator_social_accounts")
       .upsert(

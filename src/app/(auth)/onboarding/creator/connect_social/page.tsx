@@ -7,14 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Upload, Check, Music2, Instagram, Link2 } from "lucide-react";
+import { YouTubeHandleVerify } from "@/components/dashboard/youtube-handle-verify";
+import { Loader2, Upload, Check, Instagram, Link2 } from "lucide-react";
 
-type Platform = "tiktok" | "instagram" | "youtube";
+type Platform = "tiktok" | "instagram" | "youtube" | "twitter";
 
 const PLATFORMS: { id: Platform; label: string }[] = [
   { id: "tiktok", label: "TikTok" },
   { id: "instagram", label: "Instagram" },
   { id: "youtube", label: "YouTube" },
+  { id: "twitter", label: "Twitter/X" },
 ];
 
 function getTier(followerCount: number): "micro" | "mid" | "macro" | null {
@@ -36,7 +38,7 @@ function ConnectSocialPageInner() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<Platform | null>(null);
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>("tiktok");
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram");
   const [handle, setHandle] = useState("");
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [tier, setTier] = useState<"micro" | "mid" | "macro" | null>(null);
@@ -57,6 +59,24 @@ function ConnectSocialPageInner() {
     if (!userId || oauthLoading) return;
     setOauthLoading(platform);
     router.push(`/api/internal/oauth/${platform}?redirect_to=${encodeURIComponent("/onboarding/creator/connect_social")}`);
+  }
+
+  function onYouTubeVerified(account: { handle: string; follower_count: number }) {
+    setConnectedAccounts((prev) => [
+      ...prev.filter((a) => a.platform !== "youtube"),
+      {
+        id: `youtube-${Date.now()}`,
+        platform: "youtube",
+        handle: account.handle,
+        follower_count: account.follower_count,
+        verified_at: new Date().toISOString(),
+      },
+    ]);
+    // Sync the manual form so "Continue" picks up the auto-verified count.
+    setSelectedPlatform("youtube");
+    setHandle(account.handle);
+    setFollowerCount(account.follower_count);
+    setTier(getTier(account.follower_count));
   }
 
   useEffect(() => {
@@ -212,20 +232,6 @@ function ConnectSocialPageInner() {
               type="button"
               variant="outline"
               className="w-full justify-start gap-2"
-              onClick={() => startOAuth("tiktok")}
-              disabled={!userId || oauthLoading !== null}
-            >
-              {oauthLoading === "tiktok" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Music2 className="h-4 w-4" />
-              )}
-              Connect with TikTok
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-start gap-2"
               onClick={() => startOAuth("instagram")}
               disabled={!userId || oauthLoading !== null}
             >
@@ -237,11 +243,16 @@ function ConnectSocialPageInner() {
               Connect with Instagram
             </Button>
           </div>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Link2 className="h-3.5 w-3.5" />
-            Auto-connect fetches your handle and follower count directly. If a platform isn&apos;t
-            configured, use the manual form below instead.
-          </p>
+
+          <div className="space-y-2">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Link2 className="h-3.5 w-3.5" />
+              Verify your YouTube channel without a screenshot — we&apos;ll check your live
+              subscriber count and ask you to add a one-time code to your channel About to prove
+              it&apos;s yours.
+            </p>
+            <YouTubeHandleVerify onVerified={onYouTubeVerified} />
+          </div>
         </div>
 
         <div className="mb-4 flex items-center gap-3">
@@ -307,7 +318,9 @@ function ConnectSocialPageInner() {
           <div className="space-y-2">
             <Label htmlFor="screenshot">Verification screenshot</Label>
             <p className="text-xs text-muted-foreground">
-              Required when the platform is not automatically connected. An admin must approve the screenshot before this follower count is verified.
+              Required when the platform isn&apos;t connected. The follower count you type is
+              <strong> never auto-verified</strong> — an admin reviews the screenshot to confirm
+              you own the account before this count is accepted.
             </p>
             <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 hover:border-primary">
               <Upload className="h-4 w-4 text-muted-foreground" />

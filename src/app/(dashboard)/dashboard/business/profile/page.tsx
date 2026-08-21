@@ -4,6 +4,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Building2, Users2 } from "lucide-react";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
+import { TeamManagement } from "@/components/dashboard/team-management";
 
 export default async function BusinessProfilePage({
   searchParams,
@@ -22,17 +23,35 @@ export default async function BusinessProfilePage({
     .eq("user_id", user.id)
     .single();
 
-  if (!profile || profile.onboarding_step !== "complete") redirect("/onboarding");
+  // A team member (invited by an owner) has app_metadata.business_id but no
+  // business_profiles row of their own. Show the invite accept/decline UI.
+  const invitedBusinessId = user.app_metadata?.business_id as string | undefined;
+  const isTeamMember = !profile && invitedBusinessId && invitedBusinessId !== user.id;
+
+  if (!profile && !isTeamMember) redirect("/onboarding");
 
   const { data: team } = await supabase
     .from("business_team_members")
     .select("business_id, user_id, role, invited_at, joined_at")
-    .eq("business_id", user.id);
+    .eq("business_id", isTeamMember ? invitedBusinessId : user.id);
 
+  // A team member's own membership row drives the pending-invite banner.
+  const ownMembership = isTeamMember
+    ? (team ?? []).find((m) => m.user_id === user.id)
+    : null;
+  const pendingInvite = Boolean(isTeamMember && ownMembership && !ownMembership.joined_at);
+
+  // Team members render the owner's company (they have no profile row).
+  const { data: ownerProfile } = isTeamMember
+    ? await supabase.from("business_profiles").select("*").eq("user_id", invitedBusinessId).single()
+    : { data: null };
+  const displayProfile = profile ?? ownerProfile;
+
+  const subscriptionBusinessId = isTeamMember ? invitedBusinessId : user.id;
   const { data: subscription } = await supabase
     .from("business_subscriptions")
     .select("plan_slug, status")
-    .eq("business_id", user.id)
+    .eq("business_id", subscriptionBusinessId)
     .single();
 
   const planBadge = subscription?.plan_slug
@@ -40,7 +59,7 @@ export default async function BusinessProfilePage({
     : "Free";
 
   return (
-    <DashboardShell role="business" userId={user.id} userName={profile.company_name} planBadge={planBadge}>
+    <DashboardShell role="business" userId={user.id} userName={displayProfile?.company_name ?? "Team"} planBadge={planBadge}>
       <div className="space-y-6">
         <div>
           <h1 className="font-heading text-2xl font-bold">Profile</h1>
@@ -61,60 +80,58 @@ export default async function BusinessProfilePage({
           </div>
         )}
 
-        <div className="flex items-center gap-4 rounded-lg border border-border bg-surface p-5">
-          {profile.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.logo_url}
-              alt={profile.company_name}
-              className="h-16 w-16 rounded-lg object-cover"
-            />
-          ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-2xl font-bold text-primary">
-              <Building2 className="h-8 w-8" />
-            </div>
-          )}
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-heading text-xl font-bold">{profile.company_name}</h2>
-              {profile.kyb_status === "verified" && <Badge variant="success">Verified</Badge>}
-            </div>
-            <p className="mt-0.5 text-sm text-muted-foreground">{profile.bio || "No bio yet."}</p>
-            {profile.verified_domain && (
-              <p className="mt-1 text-xs text-success">✓ Domain verified: {profile.verified_domain}</p>
+        {displayProfile && (
+          <div className="flex items-center gap-4 rounded-lg border border-border bg-surface p-5">
+            {displayProfile.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayProfile.logo_url}
+                alt={displayProfile.company_name}
+                className="h-16 w-16 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-2xl font-bold text-primary">
+                <Building2 className="h-8 w-8" />
+              </div>
             )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-heading text-xl font-bold">{displayProfile.company_name}</h2>
+                {displayProfile.kyb_status === "verified" && <Badge variant="success">Verified</Badge>}
+              </div>
+              <p className="mt-0.5 text-sm text-muted-foreground">{displayProfile.bio || "No bio yet."}</p>
+              {displayProfile.verified_domain && (
+                <p className="mt-1 text-xs text-success">✓ Domain verified: {displayProfile.verified_domain}</p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <h3 className="mb-3 font-heading text-sm font-semibold">Profile picture</h3>
-          <AvatarUpload role="business" currentUrl={profile.logo_url} name={profile.company_name} />
-        </div>
+        {!isTeamMember && displayProfile && (
+          <div className="rounded-lg border border-border bg-surface p-5">
+            <h3 className="mb-3 font-heading text-sm font-semibold">Profile picture</h3>
+            <AvatarUpload role="business" currentUrl={displayProfile.logo_url} name={displayProfile.company_name} />
+          </div>
+        )}
 
         <div className="rounded-lg border border-border bg-surface p-5">
           <div className="flex items-center gap-2">
             <Users2 className="h-4 w-4 text-muted-foreground" />
             <h3 className="font-heading text-sm font-semibold">Team members</h3>
           </div>
-          {!team || team.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              No team members yet. You&apos;ll be able to invite teammates from this page.
-            </p>
-          ) : (
-            <div className="mt-2 space-y-2">
-              {team.map((m) => (
-                <div key={m.user_id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <p className="font-mono text-xs font-medium">{m.user_id}</p>
-                    <p className="text-xs text-muted-foreground">Invited {new Date(m.invited_at).toLocaleDateString()}</p>
-                  </div>
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs capitalize text-muted-foreground">
-                    {m.role}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="mt-3">
+            <TeamManagement
+              initialMembers={(team ?? []).map((m) => ({
+                business_id: m.business_id,
+                user_id: m.user_id,
+                role: m.role,
+                invited_at: m.invited_at,
+                joined_at: m.joined_at,
+              }))}
+              isOwner={!isTeamMember}
+              pendingInvite={pendingInvite}
+            />
+          </div>
         </div>
       </div>
     </DashboardShell>

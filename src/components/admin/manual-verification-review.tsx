@@ -6,9 +6,10 @@ import { Check, Clock3, Loader2, X } from "lucide-react";
 export type ManualVerificationReviewRow = {
   id: string;
   creator_id: string;
-  platform: "tiktok" | "instagram" | "youtube";
+  platform: "tiktok" | "instagram" | "youtube" | "twitter";
   handle: string | null;
   claimed_follower_count: number | null;
+  verification_token: string | null;
   screenshot_url: string | null;
   status: "pending" | "approved" | "rejected";
   review_notes: string | null;
@@ -63,6 +64,11 @@ export function ManualVerificationReview({ initial }: { initial: ManualVerificat
               <span className="flex items-center gap-1 text-xs text-warning"><Clock3 className="h-3.5 w-3.5" /> {row.status}</span>
             </div>
             <p className="text-sm text-background/70">@{row.handle || "—"} · <strong className="text-background">{Number(row.claimed_follower_count ?? 0).toLocaleString()}</strong> claimed followers</p>
+            {row.verification_token && (
+              <p className="text-xs text-background/70">
+                Expected bio token: <code className="rounded bg-background/10 px-1.5 py-0.5 font-mono text-xs font-semibold">{row.verification_token}</code>
+              </p>
+            )}
             <p className="text-xs text-background/50">Submitted {new Date(row.created_at).toLocaleString()}</p>
             <textarea
               value={notes[row.id] ?? row.review_notes ?? ""}

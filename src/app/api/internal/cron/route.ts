@@ -19,6 +19,7 @@ import {
   retryExpiredCharges,
 } from "@/lib/finance";
 import { refreshExpiredTokens } from "@/lib/oauth/token-refresh";
+import { recheckFollowerCounts } from "@/lib/follower-recheck";
 
 type JobName =
   | "deadlines"
@@ -36,7 +37,8 @@ type JobName =
   | "google-ads-sync"
   | "google-ads-reporting"
   | "google-ads-kill-switch"
-  | "google-ads-thumbnails";
+  | "google-ads-thumbnails"
+  | "follower-recheck";
 
 const ALL_JOBS: JobName[] = [
   "deadlines",
@@ -89,6 +91,8 @@ async function run(job: JobName): Promise<unknown> {
       return `paused:${await runGoogleAdsKillSwitch()}`;
     case "google-ads-thumbnails":
       return `generated:${await generateGoogleAdsThumbnails()}`;
+    case "follower-recheck":
+      return `result:${JSON.stringify(await recheckFollowerCounts())}`;
   }
 }
 

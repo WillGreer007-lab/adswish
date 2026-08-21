@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
- type Platform = "tiktok" | "instagram" | "youtube";
+ type Platform = "tiktok" | "instagram" | "youtube" | "twitter";
  type Verification = {
   id: string;
   platform: Platform;
@@ -21,6 +21,7 @@ const PLATFORMS: { id: Platform; label: string }[] = [
   { id: "tiktok", label: "TikTok" },
   { id: "instagram", label: "Instagram" },
   { id: "youtube", label: "YouTube" },
+  { id: "twitter", label: "Twitter/X" },
 ];
 
 export function ManualFollowerVerification() {
@@ -33,6 +34,7 @@ export function ManualFollowerVerification() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -40,8 +42,10 @@ export function ManualFollowerVerification() {
       .then(async (response) => ({ response, data: await response.json().catch(() => ({})) }))
       .then(({ response, data }) => {
         if (!mounted) return;
-        if (response.ok) setVerifications(data.verifications ?? []);
-        else if (response.status !== 401) setError(data.error ?? "Could not load verification status");
+        if (response.ok) {
+          setVerifications(data.verifications ?? []);
+          setTokens(data.tokens ?? {});
+        } else if (response.status !== 401) setError(data.error ?? "Could not load verification status");
         setLoading(false);
       })
       .catch(() => {
@@ -100,7 +104,9 @@ export function ManualFollowerVerification() {
       <div>
         <h3 className="font-heading text-sm font-semibold">Manual follower verification</h3>
         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          If TikTok, Instagram, or YouTube Connect is unavailable, upload one screenshot per platform. Your follower count stays unverified until an admin approves it.
+          If a platform isn&apos;t connected, post your verification code to its bio, then upload
+          one screenshot per platform showing the code. Your follower count stays unverified until
+          an admin approves it.
         </p>
       </div>
 
@@ -139,6 +145,19 @@ export function ManualFollowerVerification() {
             <Input id="manual-followers" type="number" min="0" value={followerCount} onChange={(e) => setFollowerCount(e.target.value)} placeholder="5000" required />
           </div>
         </div>
+        {tokens[platform] && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+            <p className="font-medium">Prove you own this account</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Paste this code into your {PLATFORMS.find((item) => item.id === platform)?.label} bio,
+              then take a screenshot of your profile showing it. The admin checks the screenshot
+              matches this code.
+            </p>
+            <code className="mt-2 inline-block rounded bg-muted px-2 py-1 font-mono text-base font-bold tracking-wider">
+              {tokens[platform]}
+            </code>
+          </div>
+        )}
         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground hover:border-primary">
           <ImagePlus className="h-4 w-4" />
           <span>{file ? file.name : "Choose screenshot (PNG, JPEG, or WebP; max 10MB)"}</span>
