@@ -1,5 +1,37 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — SocialVerify system (Aug 22, NOT pushed)
+
+- **Migration 052 (APPLIED):** `verification_campaigns`, `platform_verifications`,
+  `verification_campaign_audits` (RLS owner-manage + public-read audits; idempotent
+  policy drops so it re-applies cleanly).
+- **Core lib `src/lib/socialverify/`:**
+  - `tokens.ts` — `generateToken`/`verifyToken` (HMAC-SHA256, timing-safe, 7-day
+    expiry), `checkExpiry`/`needsRotation`, platform thresholds (YT 1K / TT 5K /
+    IG 3K / TW 2.5K).
+  - `scoring.ts` — no-API 100-pt authenticity score (engagement 40, comments 30,
+    consistency 15, growth 15, cross 10, challenge bonus 5) + regex post-metric
+    parsing + HMAC-signed self-reported metrics + challenge generator.
+  - `identity.ts` — 7-proof identity binding → composite confidence /125.
+  - `manifest.ts` — signed `/.well-known` manifest + `fullAudit` (hard-fails on
+    an invalid manifest signature).
+  - `canonical.ts` — recursive key-sorted JSON for HMAC signing. **Fix:** the
+    previous `JSON.stringify(obj, Object.keys(obj).sort())` uses the 2nd arg as a
+    *replacer array*, silently stripping nested `metrics`/`accounts` — signatures
+    were blind to the data they protected. Replaced with `canonicalJson`.
+- **API routes:** `POST/GET /api/internal/verification/campaigns`,
+  `POST /api/internal/verification/tokens`, `POST /api/internal/verification/check`,
+  `POST /api/internal/verification/audit`, `GET /.well-known/social-verification.json`.
+- **UI:** `src/components/verification/` (platform-selector, lock-banner,
+  token-display, identity-binding, audit-log, score-display) + 5-step page
+  `/dashboard/business/campaigns/verification`.
+- **Tests:** 4 new test files (`tokens/scoring/identity/manifest.test.ts`),
+  **254 total passing**.
+- **Verified:** typecheck ✓ · lint 0 errors (6 pre-existing warnings) ·
+  254 tests ✓ · build ✓. Migration 052 APPLIED. **NOT pushed.**
+
+---
+
 ## Latest — Public verification audit report (Aug 21, deployed)
 
 - **Migration 051 (APPLIED):** new `verification_audits` table (append-only,

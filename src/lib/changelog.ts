@@ -13,6 +13,20 @@ export type ChangelogEntry = {
  */
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v3.5.0",
+    date: "2026-08-22",
+    title: "SocialVerify — independent social-account verification",
+    highlights: [
+      "SocialVerify campaign flow: select any combination of YouTube, TikTok, Instagram, and Twitter/X, and the campaign stays locked until every selected platform is verified.",
+      "Cryptographic verification tokens: each platform gets an HMAC-signed token with a 7-day expiry, a countdown, and auto-rotation — post it to your bio to prove ownership.",
+      "No-API authenticity scoring on a 100-point scale (engagement rate, comment quality, posting consistency, growth velocity, cross-platform, plus a challenge bonus) from public post data or signed self-reported metrics — no privileged platform API keys required.",
+      "Seven-proof identity binding to stop impersonation: domain ownership, bi-directional links, time-delayed token persistence, video proof, a two-way handshake, historical content, and social-graph analysis, combined into a confidence score.",
+      "Signed domain manifest at /.well-known/social-verification.json — a cryptographically signed, public record of your verified accounts that anyone can audit independently.",
+      "Full audit with weighted scoring (signature, token match, authenticity, cross-platform) and an immutable audit log.",
+      "A five-step business dashboard (Select Platforms → Tokens → Identity → Audit → Authenticity) with a lock banner, monospace token cards, proof-of-identity cards, and a circular score ring.",
+    ],
+  },
+  {
     version: "v3.4.0",
     date: "2026-08-21",
     title: "Platform hardening, account deletion, and campaign assets",
