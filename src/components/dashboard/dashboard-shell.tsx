@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { SidebarNav } from "@/components/dashboard/sidebar-nav";
 import { LogoutButton } from "@/components/dashboard/logout-button";
 import { BackButton } from "@/components/dashboard/back-button";
 import { SessionTimeoutGuard } from "@/components/dashboard/session-timeout-guard";
@@ -69,6 +70,7 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const nav = role === "creator" ? CREATOR_NAV : BUSINESS_NAV;
+
   const roleLabel = role === "business" ? "Business" : "Creator";
 
   return (
@@ -86,18 +88,7 @@ export function DashboardShell({
             <span className="font-heading text-lg font-bold">adswish</span>
           </Link>
         </div>
-        <nav className="flex-1 space-y-1 px-2 py-2">
-          {nav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <SidebarNav items={nav.map(({ label, href }) => ({ label, href }))} role={role} />
         <div className="border-t border-border p-4">
           <p className="text-xs text-muted-foreground">Signed in as</p>
           <p className="mt-0.5 text-sm font-medium">{userName}</p>

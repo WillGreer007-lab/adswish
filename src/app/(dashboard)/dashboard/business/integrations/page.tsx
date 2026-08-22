@@ -37,7 +37,7 @@ export default async function BusinessIntegrationsPage() {
             Connect your favourite tools to amplify your campaigns. Your plan determines how many you can add.
           </p>
         </div>
-        <IntegrationHub planSlug={planSlug} planName={planName} />
+        <IntegrationHub planSlug={planSlug} planName={planName} role="business" />
       </div>
     </DashboardShell>
   );

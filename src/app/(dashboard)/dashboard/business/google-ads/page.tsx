@@ -19,6 +19,16 @@ export default async function BusinessGoogleAdsPage() {
 
   if (!profile || profile.onboarding_step !== "complete") redirect("/onboarding");
 
+  // The Google Ads dashboard is only reachable once the business has added
+  // the integration from the Integrations hub.
+  const { data: added } = await supabase
+    .from("user_integrations")
+    .select("integration_key")
+    .eq("user_id", user.id)
+    .eq("integration_key", "google_ads")
+    .maybeSingle();
+  if (!added) redirect("/dashboard/business/integrations");
+
   const { data: sub } = await supabase
     .from("business_subscriptions")
     .select("plan_slug")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Lock, Check, Plus, Trash2, Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -171,7 +172,16 @@ function OptionalCard({
   );
 }
 
-export function IntegrationHub({ planSlug, planName }: { planSlug: string; planName: string }) {
+export function IntegrationHub({
+  planSlug,
+  planName,
+  role,
+}: {
+  planSlug: string;
+  planName: string;
+  role?: "creator" | "business";
+}) {
+  const router = useRouter();
   const limit = integrationLimitForPlan(planSlug);
   const criticalCount = CRITICAL_INTEGRATIONS.length;
 
@@ -221,6 +231,14 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
         return;
       }
       setAdded((prev) => new Set(prev).add(key));
+      // Tell the sidebar nav (a separate client tree) that the set changed.
+      window.dispatchEvent(new CustomEvent("adswish:integrations-updated"));
+      // Adding Google Ads (business only) opens the dashboard directly.
+      if (key === "google_ads" && role === "business") {
+        router.push("/dashboard/business/google-ads");
+        router.refresh();
+        return;
+      }
     } catch {
       setApiError("Network error — could not add integration.");
     } finally {
@@ -245,6 +263,12 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
         next.delete(key);
         return next;
       });
+      // Tell the sidebar nav (a separate client tree) that the set changed.
+      window.dispatchEvent(new CustomEvent("adswish:integrations-updated"));
+      // Removing Google Ads hides the dashboard from the nav.
+      if (key === "google_ads") {
+        router.refresh();
+      }
     } catch {
       setApiError("Network error — could not remove integration.");
     } finally {
