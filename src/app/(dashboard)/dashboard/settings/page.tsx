@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Bell, Radar, CreditCard, Download, ArrowRight, Clock, ShieldCheck } from "lucide-react";
 import { AppearanceSettings } from "@/components/dashboard/appearance-settings";
 import { DeleteAccountButton } from "@/components/dashboard/delete-account-button";
+import { VerificationMethods } from "@/components/dashboard/verification-methods";
 
 export const metadata = { title: "Settings — Adswish" };
 
@@ -72,6 +73,11 @@ export default async function SettingsPage() {
   const role = isBusiness ? ("business" as const) : ("creator" as const);
   const name = biz?.company_name || creator?.display_name || "Account";
 
+  const { data: socials } = await supabase
+    .from("creator_social_accounts")
+    .select("id, platform, handle, follower_count, verified_at")
+    .eq("creator_id", user.id);
+
   // Role-gated cards: businesses get Tracking; creators get Payouts.
   const visible = isBusiness
     ? cards
@@ -91,6 +97,22 @@ export default async function SettingsPage() {
           <h2 className="mb-4 font-heading text-base font-semibold">Appearance</h2>
           <AppearanceSettings />
         </div>
+
+        {!isBusiness && (
+          <div className="rounded-lg border border-border bg-surface p-5">
+            <h2 className="mb-4 font-heading text-base font-semibold">Connected accounts</h2>
+            <VerificationMethods initial={(socials ?? []) as never} />
+            {(socials ?? []).some((s) => s.verified_at) && (
+              <a
+                href={`/audit/${user.id}`}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                View public verification report
+              </a>
+            )}
+          </div>
+        )}
 
         <DeleteAccountButton />
 

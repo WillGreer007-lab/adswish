@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-shell";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, CheckCircle2, Crown, ShieldCheck } from "lucide-react";
+import { Sparkles, CheckCircle2, Crown } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
-import { VerificationMethods } from "@/components/dashboard/verification-methods";
 import { CreatorLinksEditor } from "@/components/dashboard/creator-links-editor";
 import { tierColor, tierLabel } from "@/lib/tier";
 
@@ -28,11 +27,6 @@ export default async function CreatorProfilePage({
 
   if (!profile || profile.onboarding_step !== "complete") redirect("/onboarding");
 
-  const { data: socials } = await supabase
-    .from("creator_social_accounts")
-    .select("id, platform, handle, follower_count, verified_at")
-    .eq("creator_id", user.id);
-
   const { data: subscription } = await supabase
     .from("creator_subscriptions")
     .select("plan_slug, status")
@@ -48,7 +42,7 @@ export default async function CreatorProfilePage({
       <div className="space-y-6">
         <div>
           <h1 className="font-heading text-2xl font-bold">Profile</h1>
-          <p className="text-sm text-muted-foreground">Your creator identity and connected accounts.</p>
+          <p className="text-sm text-muted-foreground">Your creator identity, links, and public profile.</p>
         </div>
 
         {upgrade && (
@@ -131,20 +125,6 @@ export default async function CreatorProfilePage({
               twitch_url: profile.twitch_url ?? null,
             }}
           />
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface p-5">
-          <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>
-          <VerificationMethods initial={(socials ?? []) as never} />
-          {(socials ?? []).some((s) => s.verified_at) && (
-            <a
-              href={`/audit/${user.id}`}
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
-            >
-              <ShieldCheck className="h-4 w-4" />
-              View public verification report
-            </a>
-          )}
         </div>
       </div>
     </DashboardShell>
