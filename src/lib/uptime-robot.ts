@@ -17,25 +17,17 @@ export type UptimeRobotMonitor = {
 
 type UptimeRobotResponse = {
   stat?: string;
-  error?: unknown;
   monitors?: UptimeRobotMonitor[];
-  monitor?: { id?: number };
 };
 
 const API_BASE = "https://api.uptimerobot.com/v2";
 
 /**
- * Return the server-only key for a specific operation. Never expose these
- * values to client components or include them in diagnostics.
+ * Return the only credential used by monitor-only mode. This key is scoped to
+ * the monitor(s) explicitly mapped in Adswish and is never exposed to clients.
  */
-export function uptimeRobotKey(
-  scope: "read" | "monitor" | "main",
-): string | undefined {
-  if (scope === "main") return process.env.UPTIME_ROBOT_MAIN_API_KEY || undefined;
-  if (scope === "monitor") {
-    return process.env.UPTIME_ROBOT_MONITOR_API_KEY || process.env.UPTIME_ROBOT_API_KEY || undefined;
-  }
-  return process.env.UPTIME_ROBOT_API_KEY || undefined;
+export function uptimeRobotKey(): string | undefined {
+  return process.env.UPTIME_ROBOT_MONITOR_API_KEY || undefined;
 }
 
 async function callUptimeRobot(
@@ -62,9 +54,9 @@ async function callUptimeRobot(
   }
 }
 
-/** Read every monitor, or only the explicitly mapped monitor. */
+/** Read only the monitor explicitly mapped by the caller. */
 export async function getUptimeRobotMonitors(options: {
-  monitorId?: string | null;
+  monitorId: string;
   key?: string;
   includeLogs?: boolean;
   limit?: number;
@@ -73,54 +65,20 @@ export async function getUptimeRobotMonitors(options: {
   httpStatus: number;
   monitors: UptimeRobotMonitor[];
 }> {
-  const key = options.key || uptimeRobotKey(options.monitorId ? "monitor" : "read");
-  if (!key) return { ok: false, httpStatus: 0, monitors: [] };
+  const monitorId = options.monitorId.trim();
+  const key = options.key || uptimeRobotKey();
+  if (!key || !/^\d+$/.test(monitorId)) {
+    return { ok: false, httpStatus: 0, monitors: [] };
+  }
 
   const result = await callUptimeRobot("getMonitors", key, {
     logs: options.includeLogs ? "1" : "0",
     ...(options.limit ? { limit: String(Math.min(Math.max(options.limit, 1), 50)) } : {}),
-    ...(options.monitorId ? { monitors: options.monitorId } : {}),
+    monitors: monitorId,
   });
   return {
     ok: result.ok,
     httpStatus: result.httpStatus,
     monitors: result.body?.monitors ?? [],
   };
-}
-
-export async function createUptimeRobotMonitor(options: {
-  key: string;
-  url: string;
-  friendlyName: string;
-}): Promise<{ ok: boolean; httpStatus: number; monitorId: string | null }> {
-  const result = await callUptimeRobot("newMonitor", options.key, {
-    type: "1",
-    url: options.url,
-    friendly_name: options.friendlyName.slice(0, 255),
-    interval: "300",
-    timeout: "30",
-  });
-  const id = result.body?.monitor?.id;
-  return {
-    ok: result.ok && typeof id === "number",
-    httpStatus: result.httpStatus,
-    monitorId: typeof id === "number" ? String(id) : null,
-  };
-}
-
-export async function updateUptimeRobotMonitor(options: {
-  key: string;
-  monitorId: string;
-  url: string;
-  friendlyName: string;
-}): Promise<{ ok: boolean; httpStatus: number }> {
-  const result = await callUptimeRobot("editMonitor", options.key, {
-    id: options.monitorId,
-    type: "1",
-    url: options.url,
-    friendly_name: options.friendlyName.slice(0, 255),
-    interval: "300",
-    timeout: "30",
-  });
-  return { ok: result.ok, httpStatus: result.httpStatus };
 }

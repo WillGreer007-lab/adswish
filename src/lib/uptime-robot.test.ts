@@ -7,27 +7,31 @@ const original = {
   main: process.env.UPTIME_ROBOT_MAIN_API_KEY,
 };
 
+function restore(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
 afterEach(() => {
-  process.env.UPTIME_ROBOT_API_KEY = original.read;
-  process.env.UPTIME_ROBOT_MONITOR_API_KEY = original.monitor;
-  process.env.UPTIME_ROBOT_MAIN_API_KEY = original.main;
+  restore("UPTIME_ROBOT_API_KEY", original.read);
+  restore("UPTIME_ROBOT_MONITOR_API_KEY", original.monitor);
+  restore("UPTIME_ROBOT_MAIN_API_KEY", original.main);
 });
 
 describe("uptimeRobotKey", () => {
-  it("keeps read and management credentials scoped to their operation", () => {
-    process.env.UPTIME_ROBOT_API_KEY = "read-key";
+  it("returns only the monitor-scoped credential", () => {
     process.env.UPTIME_ROBOT_MONITOR_API_KEY = "monitor-key";
+    process.env.UPTIME_ROBOT_API_KEY = "read-key";
     process.env.UPTIME_ROBOT_MAIN_API_KEY = "main-key";
 
-    expect(uptimeRobotKey("read")).toBe("read-key");
-    expect(uptimeRobotKey("monitor")).toBe("monitor-key");
-    expect(uptimeRobotKey("main")).toBe("main-key");
+    expect(uptimeRobotKey()).toBe("monitor-key");
   });
 
-  it("falls back to the read-only key for a mapped monitor", () => {
-    process.env.UPTIME_ROBOT_API_KEY = "read-key";
+  it("does not fall back to the removed all-monitor or management credentials", () => {
     delete process.env.UPTIME_ROBOT_MONITOR_API_KEY;
+    process.env.UPTIME_ROBOT_API_KEY = "read-key";
+    process.env.UPTIME_ROBOT_MAIN_API_KEY = "main-key";
 
-    expect(uptimeRobotKey("monitor")).toBe("read-key");
+    expect(uptimeRobotKey()).toBeUndefined();
   });
 });

@@ -7,14 +7,6 @@ function normalizeDomain(domain: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function domainHostname(domain: string): string | null {
-  try {
-    return new URL(normalizeDomain(domain)).hostname;
-  } catch {
-    return null;
-  }
-}
-
 type ThirdPartyResult = {
   enabled: boolean;
   ok: boolean;
@@ -24,24 +16,34 @@ type ThirdPartyResult = {
 };
 
 /**
- * Check UptimeRobot without exposing credentials. A mapped monitor uses the
- * monitor-scoped key when available; an unmapped business uses the read-only
- * key and falls back to verified-hostname matching.
+ * Check only the monitor explicitly mapped to this business. Monitor-only
+ * mode does not guess by hostname or use an all-account credential.
  */
 async function uptimeRobotCheck(
   domain: string | undefined,
   monitorId: string | null | undefined,
 ): Promise<ThirdPartyResult> {
-  const mappingConfigured = Boolean(monitorId);
-  const key = uptimeRobotKey(mappingConfigured ? "monitor" : "read");
+  const normalizedMonitorId = monitorId?.trim() || "";
+  const mappingConfigured = Boolean(normalizedMonitorId);
 
+  if (!mappingConfigured) {
+    return {
+      enabled: false,
+      ok: false,
+      detail: "Add your UptimeRobot monitor ID below to enable this optional check",
+      mappingConfigured: false,
+      mappingOk: false,
+    };
+  }
+
+  const key = uptimeRobotKey();
   if (!key) {
     return {
       enabled: false,
       ok: false,
-      detail: "Not configured — an UptimeRobot read-only key is required",
-      mappingConfigured,
-      mappingOk: !mappingConfigured,
+      detail: "Monitor-only uptime check is not configured on the server",
+      mappingConfigured: true,
+      mappingOk: false,
     };
   }
   if (!domain) {
@@ -49,35 +51,32 @@ async function uptimeRobotCheck(
       enabled: true,
       ok: false,
       detail: "No verified domain yet",
-      mappingConfigured,
+      mappingConfigured: true,
       mappingOk: false,
     };
   }
 
-  const result = await getUptimeRobotMonitors({ monitorId, key });
+  const result = await getUptimeRobotMonitors({
+    monitorId: normalizedMonitorId,
+    key,
+  });
   if (!result.ok) {
     return {
       enabled: true,
       ok: false,
-      detail: result.httpStatus === 0 ? "UptimeRobot unreachable" : "UptimeRobot API rejected the request",
-      mappingConfigured,
+      detail: result.httpStatus === 0 ? "UptimeRobot unreachable" : "UptimeRobot API rejected the monitor request",
+      mappingConfigured: true,
       mappingOk: false,
     };
   }
 
-  const host = domainHostname(domain);
-  const match = mappingConfigured
-    ? result.monitors.find((monitor) => String(monitor.id) === monitorId)
-    : result.monitors.find((monitor) => domainHostname(monitor.url ?? "") === host);
-
+  const match = result.monitors.find((monitor) => String(monitor.id) === normalizedMonitorId);
   if (!match) {
     return {
       enabled: true,
       ok: false,
-      detail: mappingConfigured
-        ? `Mapped UptimeRobot monitor ${monitorId} was not found`
-        : `${host ?? domain} is not monitored in UptimeRobot yet`,
-      mappingConfigured,
+      detail: `Mapped UptimeRobot monitor ${normalizedMonitorId} was not found`,
+      mappingConfigured: true,
       mappingOk: false,
     };
   }
@@ -86,10 +85,10 @@ async function uptimeRobotCheck(
   return {
     enabled: true,
     ok: up,
-    detail: `${match.friendly_name || host || "Mapped monitor"} — ${
+    detail: `${match.friendly_name || `Monitor ${normalizedMonitorId}`} — ${
       up ? "up" : match.status === 0 ? "paused" : match.status === 1 ? "not checked yet" : "down"
     }`,
-    mappingConfigured,
+    mappingConfigured: true,
     mappingOk: true,
   };
 }
@@ -98,7 +97,7 @@ async function uptimeRobotCheck(
  * GET /api/internal/tracking/status
  *
  * The response separates the in-house pixel/link check, verified-domain
- * reachability, and optional UptimeRobot check so the dashboard can explain
+ * reachability, and optional mapped-monitor check so the dashboard can explain
  * exactly which prerequisite is blocking tracking.
  */
 export async function GET() {
@@ -195,7 +194,7 @@ export async function GET() {
     thirdParty: {
       ok: thirdParty.ok,
       enabled: thirdParty.enabled,
-      label: "Third-party uptime check",
+      label: "Mapped UptimeRobot monitor",
       detail: thirdParty.detail,
     },
     diagnostics: {
@@ -212,13 +211,13 @@ export async function GET() {
         detail: domain ? `Verified domain: ${domain}` : "Add and verify a business domain",
       },
       monitorMapping: {
-        ok: thirdParty.mappingOk,
+        ok: thirdParty.mappingConfigured && thirdParty.mappingOk,
         configured: thirdParty.mappingConfigured,
         detail: thirdParty.mappingConfigured
           ? thirdParty.mappingOk
-            ? "Mapped monitor was found for this account"
-            : "Mapped monitor could not be found with the configured key"
-          : "Hostname matching is active; no explicit monitor mapping",
+            ? "Saved monitor ID was found with the monitor-scoped key"
+            : "Saved monitor ID could not be found with the monitor-scoped key"
+          : "Save a numeric UptimeRobot monitor ID to enable monitor-only verification",
       },
       externalMonitor: {
         ok: thirdParty.ok,

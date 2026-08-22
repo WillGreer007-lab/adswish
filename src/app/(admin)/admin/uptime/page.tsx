@@ -12,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import {
   getUptimeRobotMonitors,
   uptimeRobotKey,
@@ -21,17 +22,16 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type KeyHealth = {
-  label: string;
-  description: string;
-  configured: boolean;
-  reachable: boolean;
-  monitorCount: number;
-  detail: string;
+const MAX_MAPPED_MONITORS = 25;
+
+type BusinessMapping = {
+  company_name: string | null;
+  uptime_robot_monitor_id: string | null;
 };
 
 type MonitorEvent = {
   monitor: UptimeRobotMonitor;
+  businesses: string[];
   log: UptimeRobotMonitorLog;
 };
 
@@ -76,7 +76,7 @@ function eventReason(reason: UptimeRobotMonitorLog["reason"]): string {
 }
 
 function formatWhen(timestamp?: number): string {
-  if (!timestamp) return "—";
+  if (!timestamp || !Number.isFinite(timestamp)) return "—";
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -105,88 +105,67 @@ function safeMonitorUrl(value?: string): string | null {
   }
 }
 
-async function probeKey(key: string | undefined) {
-  if (!key) return { ok: false, httpStatus: 0, monitors: [] as UptimeRobotMonitor[] };
-  return getUptimeRobotMonitors({ key, limit: 1 });
-}
-
-function healthFromProbe(
-  label: string,
-  description: string,
-  key: string | undefined,
-  probe: { ok: boolean; httpStatus: number; monitors: UptimeRobotMonitor[] },
-  detailWhenReachable: string,
-): KeyHealth {
-  if (!key) {
-    return {
-      label,
-      description,
-      configured: false,
-      reachable: false,
-      monitorCount: 0,
-      detail: "Not configured",
-    };
-  }
-  return {
-    label,
-    description,
-    configured: true,
-    reachable: probe.ok,
-    monitorCount: probe.monitors.length,
-    detail: probe.ok
-      ? detailWhenReachable
-      : probe.httpStatus === 0
-        ? "Request failed or UptimeRobot is unreachable"
-        : "UptimeRobot rejected this credential",
-  };
-}
-
 export default async function AdminUptimePage() {
-  const readKey = uptimeRobotKey("read");
-  const monitorKey = process.env.UPTIME_ROBOT_MONITOR_API_KEY || undefined;
-  const mainKey = uptimeRobotKey("main");
+  const monitorKey = uptimeRobotKey();
+  const service = createSupabaseServiceRoleClient();
+  const { data: mappingRows } = await service
+    .from("business_profiles")
+    .select("company_name, uptime_robot_monitor_id")
+    .not("uptime_robot_monitor_id", "is", null)
+    .limit(100);
 
-  const readResult = readKey
-    ? await getUptimeRobotMonitors({ key: readKey, includeLogs: true, limit: 50 })
-    : { ok: false, httpStatus: 0, monitors: [] as UptimeRobotMonitor[] };
-  const [monitorProbe, mainProbe] = await Promise.all([
-    probeKey(monitorKey),
-    probeKey(mainKey),
-  ]);
+  const businessesByMonitor = new Map<string, string[]>();
+  for (const row of (mappingRows ?? []) as BusinessMapping[]) {
+    const monitorId = row.uptime_robot_monitor_id?.trim();
+    if (!monitorId || !/^\d+$/.test(monitorId)) continue;
+    const businesses = businessesByMonitor.get(monitorId) ?? [];
+    if (row.company_name && !businesses.includes(row.company_name)) businesses.push(row.company_name);
+    businessesByMonitor.set(monitorId, businesses);
+  }
 
-  const keyHealth: KeyHealth[] = [
-    healthFromProbe(
-      "Read-only / all monitors",
-      "Used for fleet status, history, and incident reporting.",
-      readKey,
-      readResult,
-      `${readResult.monitors.length} monitor${readResult.monitors.length === 1 ? "" : "s"} returned`,
-    ),
-    healthFromProbe(
-      "Monitor-scoped",
-      "Used for a business's explicitly mapped monitor.",
-      monitorKey,
-      monitorProbe,
-      `${monitorProbe.monitors.length} permitted monitor${monitorProbe.monitors.length === 1 ? "" : "s"} returned`,
-    ),
-    healthFromProbe(
-      "Main / management",
-      "Reserved for explicit monitor provisioning from a business Tracking action.",
-      mainKey,
-      mainProbe,
-      "Read probe passed; write permissions are not exercised here",
-    ),
-  ];
+  const mappedIds = [...businessesByMonitor.keys()].slice(0, MAX_MAPPED_MONITORS);
+  const results = monitorKey
+    ? await Promise.all(
+        mappedIds.map((monitorId) =>
+          getUptimeRobotMonitors({
+            monitorId,
+            key: monitorKey,
+            includeLogs: true,
+            limit: 50,
+          }),
+        ),
+      )
+    : [];
 
-  const monitors = readResult.monitors;
-  const events: MonitorEvent[] = monitors
-    .flatMap((monitor) => (monitor.logs ?? []).map((log) => ({ monitor, log })))
+  const monitorRows = results.flatMap((result, index) => {
+    const monitor = result.monitors.find((item) => String(item.id) === mappedIds[index]);
+    if (!monitor) return [];
+    return [
+      {
+        monitor,
+        monitorId: mappedIds[index],
+        businesses: businessesByMonitor.get(mappedIds[index]) ?? [],
+      },
+    ];
+  });
+
+  const events: MonitorEvent[] = monitorRows
+    .flatMap(({ monitor, businesses }) =>
+      (monitor.logs ?? []).map((log) => ({ monitor, businesses, log })),
+    )
     .sort((a, b) => (b.log.datetime ?? 0) - (a.log.datetime ?? 0));
   const incidents = events.filter((event) => event.log.type === 1).slice(0, 25);
-  const upCount = monitors.filter((monitor) => monitor.status === 2).length;
-  const downCount = monitors.filter((monitor) => monitor.status === 8 || monitor.status === 9).length;
-  const configuredCount = keyHealth.filter((health) => health.configured).length;
-  const healthyKeyCount = keyHealth.filter((health) => health.configured && health.reachable).length;
+  const upCount = monitorRows.filter(({ monitor }) => monitor.status === 2).length;
+  const downCount = monitorRows.filter(({ monitor }) => monitor.status === 8 || monitor.status === 9).length;
+  const keyReachable = monitorKey ? results.some((result) => result.ok) : false;
+  const failedMappings = monitorKey ? results.filter((result) => !result.ok).length : mappedIds.length;
+  const keyDetail = !monitorKey
+    ? "Not configured"
+    : mappedIds.length === 0
+      ? "Configured; map a business monitor to run a scoped probe"
+      : keyReachable
+        ? `${monitorRows.length} mapped monitor${monitorRows.length === 1 ? "" : "s"} reachable`
+        : "UptimeRobot rejected the monitor request";
 
   return (
     <div className="space-y-6">
@@ -200,8 +179,8 @@ export default async function AdminUptimePage() {
           </Link>
           <h1 className="font-heading text-2xl font-bold text-background">Uptime monitoring</h1>
           <p className="mt-1 max-w-3xl text-sm text-background/60">
-            Server-side health for UptimeRobot credentials, configured monitors, and recent
-            incidents. Credentials are never rendered, logged, or sent to the browser.
+            Monitor-only operations for the monitors explicitly mapped by businesses. Credentials
+            are checked and used only on the server; nothing is sent to the browser.
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-md border border-background/10 bg-surface/5 px-3 py-2 text-xs text-background/60">
@@ -209,21 +188,20 @@ export default async function AdminUptimePage() {
         </div>
       </div>
 
+      <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-background/70">
+        <p className="font-medium text-background">Monitor-only mode is active</p>
+        <p className="mt-1 text-xs">
+          Adswish does not request all-account monitor access and does not create, edit, pause, or
+          delete UptimeRobot monitors. Businesses create their own monitor and save its ID in
+          Tracking settings.
+        </p>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="border-background/10 bg-surface/5">
           <CardContent className="p-5">
-            <p className="text-xs uppercase tracking-wide text-background/60">Configured keys</p>
-            <p className="mt-2 font-mono text-2xl font-bold text-background">
-              {configuredCount} / {keyHealth.length}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-background/10 bg-surface/5">
-          <CardContent className="p-5">
-            <p className="text-xs uppercase tracking-wide text-background/60">Reachable keys</p>
-            <p className="mt-2 font-mono text-2xl font-bold text-success">
-              {healthyKeyCount} / {configuredCount || keyHealth.length}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-background/60">Mapped monitors</p>
+            <p className="mt-2 font-mono text-2xl font-bold text-background">{mappedIds.length}</p>
           </CardContent>
         </Card>
         <Card className="border-background/10 bg-surface/5">
@@ -234,8 +212,16 @@ export default async function AdminUptimePage() {
         </Card>
         <Card className="border-background/10 bg-surface/5">
           <CardContent className="p-5">
-            <p className="text-xs uppercase tracking-wide text-background/60">Down incidents</p>
+            <p className="text-xs uppercase tracking-wide text-background/60">Current down</p>
             <p className={`mt-2 font-mono text-2xl font-bold ${downCount > 0 ? "text-destructive" : "text-background"}`}>
+              {downCount}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-background/10 bg-surface/5">
+          <CardContent className="p-5">
+            <p className="text-xs uppercase tracking-wide text-background/60">Recent incidents</p>
+            <p className={`mt-2 font-mono text-2xl font-bold ${incidents.length > 0 ? "text-destructive" : "text-background"}`}>
               {incidents.length}
             </p>
           </CardContent>
@@ -245,36 +231,39 @@ export default async function AdminUptimePage() {
       <Card className="border-background/10 bg-surface/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-background">
-            <KeyRound className="h-5 w-5" /> Credential scope health
+            <KeyRound className="h-5 w-5" /> Monitor-scoped credential health
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {keyHealth.map((health) => (
-              <div key={health.label} className="rounded-lg border border-background/10 bg-background/5 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-background">{health.label}</p>
-                    <p className="mt-1 text-xs text-background/50">{health.description}</p>
-                  </div>
-                  {health.reachable ? (
-                    <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
-                  ) : health.configured ? (
-                    <XCircle className="h-5 w-5 shrink-0 text-destructive" />
-                  ) : (
-                    <CircleAlert className="h-5 w-5 shrink-0 text-warning" />
-                  )}
-                </div>
-                <p className={`mt-4 text-xs font-medium ${health.reachable ? "text-success" : health.configured ? "text-destructive" : "text-warning"}`}>
-                  {health.reachable ? "Reachable" : health.configured ? "Unavailable" : "Not configured"}
+          <div className="rounded-lg border border-background/10 bg-background/5 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-background">Mapped monitor key</p>
+                <p className="mt-1 text-xs text-background/50">
+                  Read access is limited to the monitor IDs businesses have explicitly mapped.
                 </p>
-                <p className="mt-1 text-xs text-background/60">{health.detail}</p>
               </div>
-            ))}
+              {keyReachable ? (
+                <CheckCircle2 className="h-5 w-5 shrink-0 text-success" />
+              ) : monitorKey ? (
+                <XCircle className="h-5 w-5 shrink-0 text-destructive" />
+              ) : (
+                <CircleAlert className="h-5 w-5 shrink-0 text-warning" />
+              )}
+            </div>
+            <p className={`mt-4 text-xs font-medium ${keyReachable ? "text-success" : monitorKey ? "text-destructive" : "text-warning"}`}>
+              {keyReachable ? "Reachable" : monitorKey ? "Unavailable" : "Not configured"}
+            </p>
+            <p className="mt-1 text-xs text-background/60">{keyDetail}</p>
+            {failedMappings > 0 && (
+              <p className="mt-2 text-xs text-warning">
+                {failedMappings} mapped monitor{failedMappings === 1 ? "" : "s"} could not be read with this scoped key.
+              </p>
+            )}
           </div>
           <p className="mt-4 text-xs text-background/40">
-            This page performs read-only probes only. Monitor creation and edits remain behind the
-            business&apos;s explicit Tracking action and never happen during page load.
+            This page performs read-only probes. All-account read access and management operations
+            are intentionally unavailable in monitor-only mode.
           </p>
         </CardContent>
       </Card>
@@ -282,30 +271,34 @@ export default async function AdminUptimePage() {
       <Card className="border-background/10 bg-surface/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-background">
-            <MonitorUp className="h-5 w-5" /> Current monitor fleet ({monitors.length})
+            <MonitorUp className="h-5 w-5" /> Mapped monitor status ({monitorRows.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {monitors.length > 0 ? (
+          {monitorRows.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-background/10 text-left text-background/60">
                     <th className="py-2 pr-4">Monitor</th>
+                    <th className="py-2 pr-4">Mapped businesses</th>
                     <th className="py-2 pr-4">URL</th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2">Interval</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {monitors.map((monitor) => {
+                  {monitorRows.map(({ monitor, monitorId, businesses }) => {
                     const status = monitorStatus(monitor.status);
                     const url = safeMonitorUrl(monitor.url);
                     return (
-                      <tr key={String(monitor.id)} className="border-b border-background/5 align-top">
+                      <tr key={monitorId} className="border-b border-background/5 align-top">
                         <td className="py-3 pr-4">
                           <p className="font-medium text-background">{monitor.friendly_name || "Unnamed monitor"}</p>
-                          <p className="mt-1 font-mono text-xs text-background/50">ID {monitor.id ?? "—"}</p>
+                          <p className="mt-1 font-mono text-xs text-background/50">ID {monitorId}</p>
+                        </td>
+                        <td className="py-3 pr-4 text-xs text-background/70">
+                          {businesses.length > 0 ? businesses.join(", ") : "—"}
                         </td>
                         <td className="max-w-sm py-3 pr-4 text-xs text-background/70">
                           {url ? (
@@ -329,8 +322,15 @@ export default async function AdminUptimePage() {
             </div>
           ) : (
             <div className="flex items-center gap-2 text-sm text-background/60">
-              {readResult.ok ? <CircleAlert className="h-4 w-4 text-warning" /> : <XCircle className="h-4 w-4 text-destructive" />}
-              {readResult.ok ? "The read-only key returned no monitors." : "Monitor fleet unavailable until the read-only key is configured and accepted."}
+              {mappedIds.length === 0 ? (
+                <>
+                  <CircleAlert className="h-4 w-4 text-warning" /> No businesses have mapped a monitor yet.
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 text-destructive" /> Mapped monitors are unavailable with the scoped key.
+                </>
+              )}
             </div>
           )}
         </CardContent>
@@ -346,7 +346,7 @@ export default async function AdminUptimePage() {
           <CardContent>
             {incidents.length > 0 ? (
               <div className="space-y-3">
-                {incidents.map(({ monitor, log }, index) => {
+                {incidents.map(({ monitor, businesses, log }, index) => {
                   const type = eventType(log.type);
                   return (
                     <div key={`${monitor.id}-${log.datetime ?? index}`} className="rounded-md border border-background/10 bg-background/5 p-3">
@@ -354,6 +354,7 @@ export default async function AdminUptimePage() {
                         <p className="text-sm font-medium text-background">{monitor.friendly_name || `Monitor ${monitor.id}`}</p>
                         <span className={`text-xs font-medium ${type.className}`}>{type.label}</span>
                       </div>
+                      <p className="mt-1 text-xs text-background/50">{businesses.join(", ") || "No business name"}</p>
                       <p className="mt-1 text-xs text-background/60">{eventReason(log.reason)}</p>
                       <p className="mt-2 text-xs text-background/40">
                         {formatWhen(log.datetime)} · lasted {formatDuration(log.duration)}
@@ -364,7 +365,7 @@ export default async function AdminUptimePage() {
               </div>
             ) : (
               <p className="text-sm text-background/60">
-                {readResult.ok ? "No down incidents were returned in the current UptimeRobot history window." : "Incident history is unavailable without an accepted read-only key."}
+                {monitorRows.length > 0 ? "No down incidents were returned for mapped monitors." : "Incident history is unavailable until a mapped monitor can be read."}
               </p>
             )}
           </CardContent>
@@ -405,7 +406,7 @@ export default async function AdminUptimePage() {
               </div>
             ) : (
               <p className="text-sm text-background/60">
-                {readResult.ok ? "No monitor events were returned." : "History is unavailable without an accepted read-only key."}
+                {monitorRows.length > 0 ? "No monitor events were returned." : "History is unavailable until a mapped monitor can be read."}
               </p>
             )}
           </CardContent>
@@ -414,7 +415,7 @@ export default async function AdminUptimePage() {
 
       <div className="flex items-center gap-2 text-xs text-background/40">
         <Activity className="h-3.5 w-3.5" />
-        UptimeRobot data is fetched server-side when this admin page loads; key values never leave the server.
+        UptimeRobot data is fetched server-side for mapped monitor IDs; key values never leave the server.
       </div>
     </div>
   );

@@ -40,9 +40,9 @@ You gave me the Sightengine API user + secret. I wrote both to `.env.local` and
 submit is now live locally and will be live in prod once you paste `vercel-env.txt`
 into Vercel (see GO_LIVE_CHECKLIST.md Step 3 — your usual flow).
 
-> New optional env var this batch: `UPTIME_ROBOT_API_KEY` — only needed if you want
-> the third tracking layer to actively gate campaigns. Without it, the third check
-> shows as "not configured" and doesn't block anything. See step 5 below.
+> UptimeRobot is now monitor-only: businesses map one numeric monitor ID in Tracking,
+> and the server uses the scoped `UPTIME_ROBOT_MONITOR_API_KEY`. All-account read access
+> and automatic monitor management are intentionally not used. See step 4 below.
 
 ## ✅ Done for you — Stripe Connect (platform is already onboarded)
 
@@ -102,18 +102,18 @@ project and/or the app isn't published/tested). Do this in order:
 Do the usual: open `vercel-env.txt`, copy all, Vercel → Settings → Environment
 Variables → Import → Paste → Save → Redeploy. See GO_LIVE_CHECKLIST.md Step 3.
 
-### 4. (Optional) Add `UPTIME_ROBOT_API_KEY`
+### 4. (Optional) Map an UptimeRobot monitor
 
-The third tracking-verification layer is wired. To activate it so it actually gates
-affiliate/hybrid campaigns:
+The third tracking-verification layer is monitor-only. To activate it:
 
 1. Create a free UptimeRobot account → **New monitor** → type **HTTP(s)** → URL =
    your business's verified domain → create it.
-2. **My Settings → API Settings** → create a **Read-only API key** → copy it.
-3. Add `UPTIME_ROBOT_API_KEY=<key>` to `.env.local` and `vercel-env.txt` (or tell
-   me the key and I'll write it for you).
+2. Copy the monitor's numeric ID from UptimeRobot.
+3. In Adswish → Business → Tracking, enter the ID and save the mapping.
+4. The platform administrator keeps `UPTIME_ROBOT_MONITOR_API_KEY` server-side; it is
+   never pasted into the dashboard or exposed to the browser.
 
-Without the key, the third check shows "not configured" and is skipped — nothing breaks.
+Without a mapping or scoped key, the third check remains optional and shows as not configured.
 
 ---
 

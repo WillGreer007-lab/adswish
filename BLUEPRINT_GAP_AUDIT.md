@@ -73,7 +73,7 @@ These are not fabricated as complete merely because a page exists:
 2. In Stripe, enable/configure Stripe Tax and complete the Connect platform profile. Each creator/business must complete its own hosted Connect onboarding and any required tax forms.
 3. In Resend, verify the sending domain and publish SPF, DKIM, and DMARC before relying on transactional email.
 4. In Google Cloud, enable YouTube Data API v3 and publish the consent screen or add test users. TikTok/Instagram keys and provider app review are separate owner actions.
-5. Optionally create a read-only UptimeRobot API key and add `UPTIME_ROBOT_API_KEY` in Vercel to activate the third tracking check.
+5. Create an UptimeRobot HTTP(s) monitor for the verified domain, then map its numeric monitor ID in Business → Tracking. Monitor-only mode uses the server-side `UPTIME_ROBOT_MONITOR_API_KEY`; it does not require all-account or management access.
 6. Create a Vercel personal token only in local `.env.local` if authenticated build-state output is needed from `scripts/check-deploy.mjs`; never commit or paste it into chat.
 7. Publish the Chrome extension through the Chrome Web Store developer console; the repository package is prepared, but store review cannot be automated from this checkout.
 8. Have counsel review Terms, Privacy, Cookie Policy, DPA/MSA, payout language, and the UK/GBP consumer/tax implications before public money movement.

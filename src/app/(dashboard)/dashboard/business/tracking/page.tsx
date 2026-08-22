@@ -60,29 +60,23 @@ export default async function BusinessTrackingPage() {
 
         <TrackingStatus />
 
-        {/* Third-party uptime layer (optional) */}
+        {/* Mapped uptime monitor layer (optional) */}
         <div className="rounded-lg border border-dashed border-border bg-surface p-5">
-          <h2 className="font-heading text-sm font-semibold">Independent uptime &amp; health monitoring</h2>
+          <h2 className="font-heading text-sm font-semibold">Mapped uptime &amp; health monitoring</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            The third check uses <strong className="text-foreground">UptimeRobot</strong> to watch your domain
-            from outside Adswish. Adswish also exposes a safe application readiness check at{" "}
-            <code className="rounded bg-muted px-1">/api/health</code> and a public status page at{" "}
+            The optional third check uses one explicitly mapped <strong className="text-foreground">UptimeRobot</strong>
+            monitor to watch your domain from outside Adswish. Adswish also exposes a safe application readiness
+            check at <code className="rounded bg-muted px-1">/api/health</code> and a public status page at{" "}
             <code className="rounded bg-muted px-1">/status</code>.
           </p>
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-            <li>Create a free account at <strong>uptimerobot.com</strong>.</li>
-            <li>Click <strong>+ New monitor</strong> → type <strong>HTTP(s)</strong> → URL ={" "}
-              <span className="font-mono text-foreground">{profile.verified_domain || "your verified domain"}</span> → create it.</li>
-            <li>Open <strong>My Settings → API Settings</strong> → create a <strong>Read-only API key</strong> → copy it.</li>
-            <li>An administrator stores the read-only key server-side as <code className="rounded bg-muted px-1">UPTIME_ROBOT_API_KEY</code>;
-              never paste API keys into this page.</li>
-            <li>Use the monitor ID field below, or ask an administrator to create/update a monitor for the verified domain.</li>
-            <li>Return here and press <strong>Check again</strong> — the third tick turns green when UptimeRobot reports your domain as up.</li>
+            <li>Create a free account at <strong>uptimerobot.com</strong> and create an <strong>HTTP(s)</strong> monitor for{" "}
+              <span className="font-mono text-foreground">{profile.verified_domain || "your verified domain"}</span>.</li>
+            <li>Copy the numeric monitor ID from UptimeRobot.</li>
+            <li>Enter that ID below. Adswish uses only its server-side monitor-scoped credential and never reads unrelated monitors.</li>
+            <li>Return here and press <strong>Check again</strong> — the third tick turns green when the mapped monitor reports up.</li>
           </ol>
-          <UptimeMonitorSettings
-            initialMonitorId={profile.uptime_robot_monitor_id}
-            verifiedDomain={profile.verified_domain}
-          />
+          <UptimeMonitorSettings initialMonitorId={profile.uptime_robot_monitor_id} />
         </div>
 
         <div className="rounded-lg border border-border bg-surface p-5">

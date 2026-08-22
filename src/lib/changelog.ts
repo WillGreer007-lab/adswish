@@ -39,7 +39,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Campaign asset upload: businesses can now attach a preview image or video to a campaign (JPEG/PNG/WebP/GIF/MP4/WebM, max 25MB) via a new campaign-assets storage bucket.",
       "Cursor (keyset) pagination for the creator campaign feed — stable ordering with no skips or duplicates as new campaigns are posted, with a next_cursor for loading more.",
       "Monthly partition maintenance replaced the stub cron: a dynamic SQL function now creates the next 3 months of partitions for clicks_log and daily_conversion_rollups on the 25th, safely and idempotently.",
-      "UptimeRobot third-party uptime check is now wired: the Tracking page’s third tick activates once UPTIME_ROBOT_API_KEY is set and the verified domain is monitored.",
+      "Monitor-only UptimeRobot verification is now available: map one monitor ID in Tracking settings and the third tick checks it with a server-side monitor-scoped key — no all-account access or automatic monitor provisioning.",
       "Follower re-check worker: a monthly cron re-fetches each connected social account's live follower count, recomputes the creator's tier, and refreshes badges — gracefully skipping any platform whose API keys aren't configured yet.",
       "Team seats lifecycle: business owners can invite teammates by email (with plan seat-limit enforcement), invitees accept or decline, and owners can remove members — and the owner is notified in-app the moment a teammate accepts or declines.",
       "Team invitations now send a branded email with a one-click accept link, and brand-new invitees get a password-set link so they can log in with a password right away.",
