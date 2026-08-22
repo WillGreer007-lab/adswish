@@ -1,6 +1,6 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
-## Latest — Monitor-only UptimeRobot verification and admin operations (Aug 22, NOT pushed)
+## Latest — Monitor-only UptimeRobot verification and admin operations (Aug 22, pushed 2b7fc3a; Vercel READY)
 
 - Migration **056** (`supabase/migrations/056_uptime_robot_monitor_mapping.sql`) is applied to cloud Supabase. It adds nullable `business_profiles.uptime_robot_monitor_id`.
 - `PATCH /api/internal/business/uptime-monitor` provides owner-only manual monitor-ID mapping. Automatic monitor creation/update was removed; businesses create their own HTTP(s) monitor in UptimeRobot and save its numeric ID in Tracking settings.
@@ -8,8 +8,8 @@
 - Tracking status returns diagnostics for application response, database access, verified domain, monitor mapping, and the mapped UptimeRobot monitor. The UI exposes these under **View tracking diagnostics**.
 - Added public `GET /api/health` readiness endpoint (application + database) and `/status` page with polling, safe current health results, and no credentials/customer data. Added the status page to the public home footer.
 - Protected admin `/admin/uptime` now shows only mapped-monitor scope health, mapped monitor status, recent mapped-monitor history, and down incidents. It is linked from the Superadmin dashboard and never renders credential values.
-- **Credential check:** the local Vercel token has project access (HTTP 200). The monitor-scoped UptimeRobot key is valid and is configured server-side in Vercel for **Preview + Production** as `UPTIME_ROBOT_MONITOR_API_KEY`. The read-only key remains rejected and the main key is absent; monitor-only mode intentionally does not use either.
-- **Verified before this conversion:** typecheck ✓ · lint 0 errors (5 pre-existing warnings) · 274 tests ✓ · build ✓. The monitor-only conversion still needs its final gate and deployment smoke test.
+- **Credential check:** the local Vercel token has project access (HTTP 200). The monitor-scoped UptimeRobot key is valid and is configured server-side in Vercel for **Preview + Production** as `UPTIME_ROBOT_MONITOR_API_KEY`. The read-only key remains rejected and the main key is absent; monitor-only mode intentionally does not use either. Vercel has no all-monitor or management-key variables.
+- **Verified:** typecheck ✓ · lint 0 errors (5 pre-existing warnings) · 274 tests ✓ · build ✓. Production deployment for `2b7fc3a` reached READY; `/`, `/status`, and `/api/health` returned HTTP 200, admin/API access controls returned the expected redirects/statuses, and the monitor-scoped UptimeRobot probe returned `stat=ok`. There are currently no mapped business profiles in cloud, so an authenticated Tracking third-party green tick requires a business to save a monitor ID.
 
 ---
 
