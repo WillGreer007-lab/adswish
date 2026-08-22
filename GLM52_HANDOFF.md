@@ -1,6 +1,6 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
-## Latest — Uptime monitoring layers, diagnostics, and admin operations (Aug 22, NOT pushed)
+## Latest — Uptime monitoring layers, diagnostics, and admin operations (Aug 22, pushed 788cbd9; Vercel READY)
 
 - Added migration **056** (`supabase/migrations/056_uptime_robot_monitor_mapping.sql`), applied to cloud Supabase. It adds nullable `business_profiles.uptime_robot_monitor_id`.
 - Added authenticated `PATCH /api/internal/business/uptime-monitor` for owner-only manual mapping and explicit `POST` monitor provisioning. The Tracking page now has a numeric monitor-ID field plus a button that creates or updates an HTTP monitor for the already-verified domain; it never provisions a monitor on page load.
@@ -9,7 +9,7 @@
 - Added public `GET /api/health` readiness endpoint (application + database) and `/status` page with polling, safe current health results, and no credentials/customer data. Added the status page to the public home footer.
 - Added protected admin `/admin/uptime` with credential-scope probes, current monitor fleet, recent UptimeRobot history, and down-incident summaries. It is linked from the Superadmin dashboard and never renders credential values; all probes are read-only.
 - **Credential check (latest):** the local Vercel token has project access (HTTP 200). The local monitor-scoped UptimeRobot key is valid and returns the mapped monitor; it is configured server-side in Vercel for **Preview + Production** as `UPTIME_ROBOT_MONITOR_API_KEY`. The local read-only key currently returns `stat=fail`, and `UPTIME_ROBOT_MAIN_API_KEY` is absent, so neither was uploaded and no monitor create/update call was made. Replace those two local entries before configuring them.
-- **Verified code:** typecheck ✓ · lint 0 errors (5 pre-existing warnings) · 274 tests ✓ · build ✓. Existing deployments need a redeploy before the new Vercel variable is available; the live green third-party tick still requires the accepted read-only key (or a mapped monitor plus the monitor-scoped key).
+- **Verified:** typecheck ✓ · lint 0 errors (5 pre-existing warnings) · 274 tests ✓ · build ✓. Commit `788cbd9` is pushed to `origin/main`; its Vercel Production deployment reached READY and the deployed `/api/health` and `/status` routes returned HTTP 200. The live green third-party tick still requires the accepted read-only key for hostname matching, or a business-specific mapping plus the configured monitor-scoped key.
 
 ---
 
