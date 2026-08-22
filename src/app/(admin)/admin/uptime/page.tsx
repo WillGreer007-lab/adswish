@@ -29,6 +29,15 @@ type BusinessMapping = {
   uptime_robot_monitor_id: string | null;
 };
 
+type LocalMonitorCheck = {
+  monitor_id: string;
+  status: number | null;
+  monitor_name: string | null;
+  monitor_url: string | null;
+  checked_at: string;
+  error_message: string | null;
+};
+
 type MonitorEvent = {
   monitor: UptimeRobotMonitor;
   businesses: string[];
@@ -84,6 +93,12 @@ function formatWhen(timestamp?: number): string {
   }).format(new Date(timestamp * 1000));
 }
 
+function formatIsoWhen(value?: string | null): string {
+  if (!value) return "—";
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? formatWhen(timestamp / 1000) : "—";
+}
+
 function formatDuration(seconds?: number): string {
   if (!seconds || seconds < 1) return "—";
   const minutes = Math.floor(seconds / 60);
@@ -124,6 +139,17 @@ export default async function AdminUptimePage() {
   }
 
   const mappedIds = [...businessesByMonitor.keys()].slice(0, MAX_MAPPED_MONITORS);
+  let localChecks: LocalMonitorCheck[] = [];
+  if (mappedIds.length > 0) {
+    const { data } = await service
+      .from("uptime_monitor_checks")
+      .select("monitor_id, status, monitor_name, monitor_url, checked_at, error_message")
+      .in("monitor_id", mappedIds)
+      .order("checked_at", { ascending: false })
+      .limit(100);
+    localChecks = (data ?? []) as LocalMonitorCheck[];
+  }
+
   const results = monitorKey
     ? await Promise.all(
         mappedIds.map((monitorId) =>
@@ -412,6 +438,53 @@ export default async function AdminUptimePage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-background/10 bg-surface/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-background">
+            <Activity className="h-5 w-5" /> Scoped poll history ({localChecks.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {localChecks.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-background/10 text-left text-background/60">
+                    <th className="py-2 pr-3">Checked (UTC)</th>
+                    <th className="py-2 pr-3">Monitor</th>
+                    <th className="py-2 pr-3">Result</th>
+                    <th className="py-2">Detail</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {localChecks.slice(0, 25).map((check, index) => {
+                    const status = monitorStatus(check.status ?? undefined);
+                    return (
+                      <tr key={`${check.monitor_id}-${check.checked_at}-${index}`} className="border-b border-background/5 align-top">
+                        <td className="py-3 pr-3 whitespace-nowrap text-xs text-background/60">{formatIsoWhen(check.checked_at)}</td>
+                        <td className="py-3 pr-3 text-xs text-background">
+                          {check.monitor_name || `Monitor ${check.monitor_id}`}
+                          <span className="mt-1 block font-mono text-background/40">ID {check.monitor_id}</span>
+                        </td>
+                        <td className={`py-3 pr-3 text-xs font-medium ${status.className}`}>{status.label}</td>
+                        <td className="py-3 text-xs text-background/60">{check.error_message || check.monitor_url || "Scoped response recorded"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-background/60">
+              {mappedIds.length > 0 ? "The first scoped poll will appear here after the next check." : "History is unavailable until a business maps a monitor."}
+            </p>
+          )}
+          <p className="mt-4 text-xs text-background/40">
+            These rows are real server-side observations for mapped monitors. The fixture and worker never fabricate outage incidents.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="flex items-center gap-2 text-xs text-background/40">
         <Activity className="h-3.5 w-3.5" />

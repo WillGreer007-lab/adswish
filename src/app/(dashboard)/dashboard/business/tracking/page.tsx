@@ -77,6 +77,14 @@ export default async function BusinessTrackingPage() {
             <li>Return here and press <strong>Check again</strong> — the third tick turns green when the mapped monitor reports up.</li>
           </ol>
           <UptimeMonitorSettings initialMonitorId={profile.uptime_robot_monitor_id} />
+          <p className="mt-3 text-xs text-muted-foreground">
+            If the mapped monitor reports an outage, the dashboard notification bell sends one alert;
+            repeated polls stay quiet until UptimeRobot reports recovery. Manage this notification in{" "}
+            <a href="/dashboard/settings/notifications" className="font-medium text-primary hover:underline">
+              Notification Settings
+            </a>
+            .
+          </p>
         </div>
 
         <div className="rounded-lg border border-border bg-surface p-5">

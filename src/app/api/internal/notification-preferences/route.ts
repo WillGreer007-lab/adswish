@@ -9,6 +9,7 @@ export const NOTIFICATION_TYPES = [
   "review",
   "message",
   "system",
+  "uptime_outage",
 ] as const;
 
 export async function GET() {

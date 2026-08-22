@@ -12,6 +12,7 @@ const TYPES = [
   { value: "review", label: "Reviews" },
   { value: "message", label: "Messages" },
   { value: "system", label: "System" },
+  { value: "uptime_outage", label: "Uptime outages & recovery" },
 ] as const;
 
 interface Prefs {

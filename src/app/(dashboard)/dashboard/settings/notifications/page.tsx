@@ -11,7 +11,7 @@ export default async function NotificationSettingsPage() {
   if (!user) redirect("/login?redirect=/dashboard/settings/notifications");
 
   const role =
-    user.app_metadata?.role === "business"
+    (user.user_metadata?.role ?? user.app_metadata?.role) === "business"
       ? ("business" as const)
       : ("creator" as const);
 

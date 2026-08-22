@@ -20,7 +20,6 @@ type ThirdPartyResult = {
  * mode does not guess by hostname or use an all-account credential.
  */
 async function uptimeRobotCheck(
-  domain: string | undefined,
   monitorId: string | null | undefined,
 ): Promise<ThirdPartyResult> {
   const normalizedMonitorId = monitorId?.trim() || "";
@@ -46,16 +45,6 @@ async function uptimeRobotCheck(
       mappingOk: false,
     };
   }
-  if (!domain) {
-    return {
-      enabled: true,
-      ok: false,
-      detail: "No verified domain yet",
-      mappingConfigured: true,
-      mappingOk: false,
-    };
-  }
-
   const result = await getUptimeRobotMonitors({
     monitorId: normalizedMonitorId,
     key,
@@ -172,7 +161,7 @@ export async function GET() {
     }
   }
 
-  const thirdParty = await uptimeRobotCheck(domain, profile?.uptime_robot_monitor_id);
+  const thirdParty = await uptimeRobotCheck(profile?.uptime_robot_monitor_id);
   const inhouseOk = hasLivePixel || hasClickedLink;
   const fullyActive = inhouseOk && externalOk && (!thirdParty.enabled || thirdParty.ok);
 

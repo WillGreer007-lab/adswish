@@ -97,6 +97,7 @@ export function NotificationCenter({ userId }: { userId: string }) {
     review: "text-primary",
     message: "text-primary",
     system: "text-muted-foreground",
+    uptime_outage: "text-destructive",
   };
 
   return (

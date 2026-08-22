@@ -1,5 +1,18 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — Scoped UptimeRobot demo mapping and outage alerts (Aug 22, local preview; not pushed)
+
+- **Migration 057 applied:** `supabase/migrations/057_uptime_monitor_alerts.sql` expands the existing in-app notification type check with `uptime_outage`, adds service-role-only `uptime_monitor_states`, and schedules `check-mapped-uptime-monitors` every 10 minutes. The cron job sends only the configured monitor-scoped key to explicitly mapped monitor IDs.
+- **Migration 058 applied:** `supabase/migrations/058_uptime_monitor_check_history.sql` adds service-role-only `uptime_monitor_checks` for real scoped poll observations. It does not create synthetic incidents or expose monitor metadata through client RLS.
+- **Outage notifications:** `src/lib/uptime-monitor-alerts.ts` polls mapped monitors from the existing cron route. UptimeRobot statuses 8/9 generate one `uptime_outage` notification, repeated down polls are deduplicated, and status 2 generates one recovery notification. The notification settings page and bell now include “Uptime outages & recovery”. No all-account or management key is used.
+- **Safe demo fixture:** `scripts/seed-uptime-demo.mjs` is explicitly flag-gated, refuses production, accepts only the designated test business or an `@adswish.test` account, verifies the real monitor with the monitor-scoped key, saves the mapping, and records one real observation. It never creates, edits, pauses, deletes, or fabricates an UptimeRobot monitor/incident.
+- **Designated live demo:** `Buffy GA Test Co` (`biz-ga-test@adswish.test`) is mapped to real monitor `803802534`; the monitor returned status **up**. The worker was triggered through `/api/internal/cron`, returning `key_configured=true`, `mapped=1`, `checked=1`, `alerts_sent=0`, `errors=0`; Supabase state is `last_status=2`, `last_alert_state=up`, and real local poll history is present. The previous temporary mapping was cleared.
+- **Authenticated preview walkthrough:** local business login → Business → Tracking showed the third **Mapped UptimeRobot monitor** tick green with `adswish-lake.vercel.app — up`; expanded diagnostics showed application/database reachable, monitor mapping found, and external monitor up. `/status` showed “All systems operational”; notification settings showed the new uptime category.
+- **Important limitation:** UptimeRobot returned zero historical log entries for the scoped demo key at fixture time. The admin page therefore shows the real local poll history and truthfully reports no incidents; it does not invent outage data. A real outage/recovery transition will create the corresponding in-app notification.
+- **Verification:** typecheck ✓ · lint 0 errors (5 existing warnings) · **279 tests** ✓ · build ✓. The new code/migrations are **not pushed** in this turn; the prior deployed production commit remains `283be53` until an explicit push is approved.
+
+---
+
 ## Latest — Monitor-only UptimeRobot verification and admin operations (Aug 22, pushed 2b7fc3a; Vercel READY)
 
 - Migration **056** (`supabase/migrations/056_uptime_robot_monitor_mapping.sql`) is applied to cloud Supabase. It adds nullable `business_profiles.uptime_robot_monitor_id`.

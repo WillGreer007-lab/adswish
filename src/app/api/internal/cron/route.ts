@@ -20,6 +20,7 @@ import {
 } from "@/lib/finance";
 import { refreshExpiredTokens } from "@/lib/oauth/token-refresh";
 import { recheckFollowerCounts } from "@/lib/follower-recheck";
+import { checkMappedUptimeMonitors } from "@/lib/uptime-monitor-alerts";
 
 type JobName =
   | "deadlines"
@@ -38,7 +39,8 @@ type JobName =
   | "google-ads-reporting"
   | "google-ads-kill-switch"
   | "google-ads-thumbnails"
-  | "follower-recheck";
+  | "follower-recheck"
+  | "uptime-monitor-alerts";
 
 const ALL_JOBS: JobName[] = [
   "deadlines",
@@ -93,6 +95,8 @@ async function run(job: JobName): Promise<unknown> {
       return `generated:${await generateGoogleAdsThumbnails()}`;
     case "follower-recheck":
       return `result:${JSON.stringify(await recheckFollowerCounts())}`;
+    case "uptime-monitor-alerts":
+      return JSON.stringify(await checkMappedUptimeMonitors());
   }
 }
 

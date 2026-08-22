@@ -76,7 +76,8 @@ export type NotificationType =
   | "pixel_offline"
   | "review"
   | "message"
-  | "system";
+  | "system"
+  | "uptime_outage";
 
 export type AttributionMethod = "cookie" | "s2s" | "utm_fallback" | "manual";
 
