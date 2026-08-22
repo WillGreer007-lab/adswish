@@ -1,84 +1,59 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { YouTubeHandleVerify } from "@/components/dashboard/youtube-handle-verify";
-import { Loader2, Upload, Check, Instagram, Link2 } from "lucide-react";
+import { Loader2, Upload, Check, ChevronLeft, Copy, ArrowRight } from "lucide-react";
 
 type Platform = "tiktok" | "instagram" | "youtube" | "twitter";
+type Tier = "micro" | "mid" | "macro";
 
-const PLATFORMS: { id: Platform; label: string }[] = [
-  { id: "tiktok", label: "TikTok" },
-  { id: "instagram", label: "Instagram" },
-  { id: "youtube", label: "YouTube" },
-  { id: "twitter", label: "Twitter/X" },
+const MIN_FOLLOWERS = 10000;
+
+const PLATFORMS: { id: Platform; label: string; icon: string; bioHint: string }[] = [
+  { id: "tiktok", label: "TikTok", icon: "🎵", bioHint: "Profile → Edit profile → Bio" },
+  { id: "instagram", label: "Instagram", icon: "📸", bioHint: "Profile → Edit profile → Bio" },
+  { id: "youtube", label: "YouTube", icon: "🎬", bioHint: "Studio → Customization → Basic info → Description" },
+  { id: "twitter", label: "Twitter / X", icon: "𝕏", bioHint: "Profile → Edit profile → Bio" },
 ];
 
-function getTier(followerCount: number): "micro" | "mid" | "macro" | null {
+function getTier(followerCount: number): Tier | null {
   if (followerCount < 10000) return null;
   if (followerCount < 100000) return "micro";
   if (followerCount < 1000000) return "mid";
   return "macro";
 }
 
-const TIER_LABELS: Record<string, { label: string; color: string }> = {
+const TIER_LABELS: Record<Tier, { label: string; color: string }> = {
   micro: { label: "Small Creator (10K–99.9K)", color: "text-emerald-600" },
   mid: { label: "Moderate Creator (100K–999.9K)", color: "text-blue-600" },
   macro: { label: "Big Creator (1M+)", color: "text-violet-600" },
 };
 
-function ConnectSocialPageInner() {
+const STEPS = ["Platform", "Details", "Verify", "Review"];
+
+export default function ConnectSocialPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<Platform | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep] = useState(0);
+
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram");
   const [handle, setHandle] = useState("");
   const [followerCount, setFollowerCount] = useState<number | null>(null);
-  const [tier, setTier] = useState<"micro" | "mid" | "macro" | null>(null);
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [tokens, setTokens] = useState<Record<string, string>>({});
   const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
-  const err = searchParams.get("error");
-  const oauthError = err === "tiktok_not_configured"
-    ? "TikTok Connect isn't set up yet — add your TikTok API keys in Settings to enable it. You can still connect manually below."
-    : err === "instagram_not_configured"
-      ? "Instagram Connect isn't set up yet — add your Instagram API keys in Settings to enable it. You can still connect manually below."
-      : err === "token_exchange_failed"
-        ? "We couldn't finish connecting that account. Please try again."
-        : err
-          ? `Connection failed (${err}). Please try again.`
-          : null;
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function startOAuth(platform: Platform) {
-    if (!userId || oauthLoading) return;
-    setOauthLoading(platform);
-    router.push(`/api/internal/oauth/${platform}?redirect_to=${encodeURIComponent("/onboarding/creator/connect_social")}`);
-  }
-
-  function onYouTubeVerified(account: { handle: string; follower_count: number }) {
-    setConnectedAccounts((prev) => [
-      ...prev.filter((a) => a.platform !== "youtube"),
-      {
-        id: `youtube-${Date.now()}`,
-        platform: "youtube",
-        handle: account.handle,
-        follower_count: account.follower_count,
-        verified_at: new Date().toISOString(),
-      },
-    ]);
-    // Sync the manual form so "Continue" picks up the auto-verified count.
-    setSelectedPlatform("youtube");
-    setHandle(account.handle);
-    setFollowerCount(account.follower_count);
-    setTier(getTier(account.follower_count));
-  }
+  const tier = followerCount !== null ? getTier(followerCount) : null;
+  const platformInfo = PLATFORMS.find((p) => p.id === selectedPlatform)!;
 
   useEffect(() => {
     async function loadData() {
@@ -111,77 +86,78 @@ function ConnectSocialPageInner() {
         setSelectedPlatform(first.platform);
         setHandle(first.handle);
         setFollowerCount(first.follower_count);
-        setTier(getTier(first.follower_count));
       }
+      setLoading(false);
     }
     loadData();
   }, [router]);
 
   function handleFollowerInput(value: string) {
     const count = parseInt(value, 10);
-    if (isNaN(count)) {
-      setFollowerCount(null);
-      setTier(null);
-      return;
-    }
-    setFollowerCount(count);
-    setTier(getTier(count));
+    setFollowerCount(isNaN(count) ? null : count);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function copyProofCode() {
+    const code = tokens[selectedPlatform];
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable
+    }
+  }
+
+  const canLeavePlatform = Boolean(selectedPlatform);
+  const canLeaveDetails = handle.trim().length > 0 && followerCount !== null;
+  const canLeaveVerify = Boolean(screenshot);
+
+  async function submitVerification() {
     if (!userId) return;
+    setError(null);
 
-    if (followerCount === null || followerCount < 10000) {
-      alert("You need at least 10,000 followers on at least one platform to join Adswish. If your platform doesn't expose follower count, upload a screenshot for manual verification.");
+    if (followerCount === null || followerCount < MIN_FOLLOWERS) {
+      setError(`You need at least ${MIN_FOLLOWERS.toLocaleString()} followers on at least one platform to join Adswish.`);
+      setStep(1);
+      return;
+    }
+    if (!screenshot) {
+      setError("Upload a screenshot for manual verification before continuing.");
+      setStep(2);
       return;
     }
 
-    const automaticallyVerified = connectedAccounts.some(
-      (account) => account.platform === selectedPlatform && account.verified_at,
-    );
-    if (!automaticallyVerified && !screenshot) {
-      alert("Upload a screenshot for manual verification before continuing.");
-      return;
-    }
-
-    setLoading(true);
+    setSubmitting(true);
     const supabase = createSupabaseBrowserClient();
 
-    if (screenshot) {
-      const form = new FormData();
-      form.append("platform", selectedPlatform);
-      form.append("handle", handle);
-      form.append("follower_count", String(followerCount));
-      form.append("file", screenshot);
-      const verificationResponse = await fetch("/api/internal/manual-verifications", {
-        method: "POST",
-        body: form,
-      });
-      const verificationData = await verificationResponse.json().catch(() => ({}));
-      if (!verificationResponse.ok) {
-        alert(verificationData.error || "Could not submit the screenshot for review.");
-        setLoading(false);
-        return;
-      }
+    const form = new FormData();
+    form.append("platform", selectedPlatform);
+    form.append("handle", handle);
+    form.append("follower_count", String(followerCount));
+    form.append("file", screenshot);
+    const verificationResponse = await fetch("/api/internal/manual-verifications", {
+      method: "POST",
+      body: form,
+    });
+    const verificationData = await verificationResponse.json().catch(() => ({}));
+    if (!verificationResponse.ok) {
+      setError(verificationData.error || "Could not submit the screenshot for review.");
+      setSubmitting(false);
+      return;
     }
 
-    const profileUpdate: {
-      onboarding_step: string;
-      tier?: "micro" | "mid" | "macro";
-      previous_tier?: "micro" | "mid" | "macro";
-      tier_changed_at?: string;
-    } = { onboarding_step: "plan_selection" };
-    if (automaticallyVerified && tier) {
-      profileUpdate.tier = tier;
-      profileUpdate.previous_tier = tier;
-      profileUpdate.tier_changed_at = new Date().toISOString();
+    if (tier) {
+      await supabase
+        .from("creator_profiles")
+        .update({
+          onboarding_step: "plan_selection",
+          tier,
+          previous_tier: tier,
+          tier_changed_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
     }
-
-    await supabase
-      .from("creator_profiles")
-      .update(profileUpdate)
-      .eq("user_id", userId);
 
     router.push("/onboarding/creator/plan_selection");
   }
@@ -196,22 +172,57 @@ function ConnectSocialPageInner() {
     router.push("/onboarding/creator/plan_selection");
   }
 
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle>Connect a social account</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Step 2 of 4 — You need at least 10,000 followers to join.
+          Step 2 of 4 — You need at least 10,000 followers on one platform to join.
         </p>
       </CardHeader>
       <CardContent>
-        {connectedAccounts.length > 0 && (
+        {/* Progress indicator */}
+        <div className="mb-6 flex items-center gap-2">
+          {STEPS.map((label, i) => (
+            <div key={label} className="flex flex-1 items-center gap-2">
+              <div
+                className={
+                  i <= step
+                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground"
+                    : "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground"
+                }
+              >
+                {i < step ? <Check className="h-4 w-4" /> : i + 1}
+              </div>
+              <span
+                className={
+                  i <= step ? "hidden text-xs font-medium sm:block" : "hidden text-xs text-muted-foreground sm:block"
+                }
+              >
+                {label}
+              </span>
+              {i < STEPS.length - 1 && <div className="h-px flex-1 bg-border" />}
+            </div>
+          ))}
+        </div>
+
+        {connectedAccounts.length > 0 && step === 0 && (
           <div className="mb-4 rounded-lg border border-border bg-muted/50 p-3">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Connected accounts
+              Already connected
             </p>
             {connectedAccounts.map((acc) => (
-              <div key={acc.id} className="mt-2 flex items-center gap-2">
+              <div key={acc.id} className="mt-2 flex flex-wrap items-center gap-2">
                 <Check className="h-4 w-4 text-success" />
                 <span className="text-sm capitalize">{acc.platform}</span>
                 <span className="text-sm text-muted-foreground">@{acc.handle}</span>
@@ -228,157 +239,232 @@ function ConnectSocialPageInner() {
           </div>
         )}
 
-        {oauthError && (
-          <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-            {oauthError}
+        {error && (
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
           </div>
         )}
 
-        <div className="mb-4 space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Connect automatically
-          </p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-start gap-2"
-              onClick={() => startOAuth("instagram")}
-              disabled={!userId || oauthLoading !== null}
-            >
-              {oauthLoading === "instagram" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Instagram className="h-4 w-4" />
-              )}
-              Connect with Instagram
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Link2 className="h-3.5 w-3.5" />
-              Verify your YouTube channel without a screenshot — we&apos;ll check your live
-              subscriber count and ask you to add a one-time code to your channel About to prove
-              it&apos;s yours.
-            </p>
-            <YouTubeHandleVerify onVerified={onYouTubeVerified} />
-          </div>
-        </div>
-
-        <div className="mb-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-border" />
-          <span className="text-xs text-muted-foreground">or connect manually</span>
-          <div className="h-px flex-1 bg-border" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Platform</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setSelectedPlatform(p.id)}
-                  className={`rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${
-                    selectedPlatform === p.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
+        {/* STEP 0: Platform */}
+        {step === 0 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Choose the platform you want to verify</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                You can add more platforms from your dashboard later. Each platform must meet the
+                10,000-follower minimum and is verified manually by our team.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {PLATFORMS.map((p) => {
+                const isSelected = selectedPlatform === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedPlatform(p.id)}
+                    className={
+                      isSelected
+                        ? "flex items-center gap-3 rounded-lg border-2 border-primary bg-primary/5 p-4 text-left"
+                        : "flex items-center gap-3 rounded-lg border border-border p-4 text-left hover:bg-muted/50"
+                    }
+                  >
+                    <span className="text-2xl" aria-hidden>{p.icon}</span>
+                    <span className="flex-1">
+                      <span className="block text-sm font-medium">{p.label}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        min 10,000 followers
+                      </span>
+                    </span>
+                    {isSelected && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setStep(1)} disabled={!canLeavePlatform}>
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="handle">Your {selectedPlatform} handle</Label>
-            <Input
-              id="handle"
-              placeholder="@yourusername"
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="followers">Follower count</Label>
-            <Input
-              id="followers"
-              type="number"
-              placeholder="e.g. 5000"
-              value={followerCount ?? ""}
-              onChange={(e) => handleFollowerInput(e.target.value)}
-              required
-            />
-            {tier && (
-              <p className={`text-sm font-medium ${TIER_LABELS[tier].color}`}>
-                Assigned tier: {TIER_LABELS[tier].label}
+        {/* STEP 1: Details */}
+        {step === 1 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">
+                {platformInfo.icon} Your {platformInfo.label} account
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Enter the handle and follower count exactly as shown on your public profile.
               </p>
-            )}
-            {followerCount !== null && followerCount < 10000 && (
-              <p className="text-sm text-destructive">
-                You need at least 10,000 followers to join Adswish.
-              </p>
-            )}
-          </div>
-
-          {tokens[selectedPlatform] && (
-            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
-              <p className="font-medium">Prove you own this account</p>
-              <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-                <li>Paste this code into your {PLATFORMS.find((p) => p.id === selectedPlatform)?.label} bio.</li>
-                <li>Take a screenshot of your profile showing the code.</li>
-                <li>Upload it below — an admin confirms the code matches before your count is verified.</li>
-              </ol>
-              <code className="mt-2 inline-block rounded bg-muted px-2 py-1 font-mono text-base font-bold tracking-wider">
-                {tokens[selectedPlatform]}
-              </code>
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="screenshot">Verification screenshot</Label>
-            <p className="text-xs text-muted-foreground">
-              Required when the platform isn&apos;t connected. The follower count you type is
-              <strong> never auto-verified</strong> — an admin reviews the screenshot to confirm
-              you own the account before this count is accepted.
-            </p>
-            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 hover:border-primary">
-              <Upload className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                {screenshot ? screenshot.name : "Choose file..."}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+            <div className="space-y-2">
+              <Label htmlFor="handle">{platformInfo.label} handle</Label>
+              <Input
+                id="handle"
+                placeholder="@yourusername"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                autoFocus
               />
-            </label>
-          </div>
+            </div>
 
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={handleSkip}>
-              Skip for now
-            </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</> : "Continue"}
-            </Button>
+            <div className="space-y-2">
+              <Label htmlFor="followers">Follower count</Label>
+              <Input
+                id="followers"
+                type="number"
+                placeholder="e.g. 250000"
+                value={followerCount ?? ""}
+                onChange={(e) => handleFollowerInput(e.target.value)}
+              />
+              {tier && (
+                <p className={`text-sm font-medium ${TIER_LABELS[tier].color}`}>
+                  Assigned tier: {TIER_LABELS[tier].label}
+                </p>
+              )}
+              {followerCount !== null && followerCount < MIN_FOLLOWERS && (
+                <p className="text-sm text-destructive">
+                  You need at least 10,000 followers to join Adswish.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(0)}>
+                <ChevronLeft className="h-4 w-4" /> Back
+              </Button>
+              <Button onClick={() => setStep(2)} disabled={!canLeaveDetails}>
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </form>
+        )}
+
+        {/* STEP 2: Verify ownership */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Prove you own this account</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Paste the code below into your {platformInfo.label} bio, then upload a screenshot
+                showing it. Our team confirms the code matches before your count is accepted.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Your {platformInfo.label} verification code</Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 break-all rounded-md border border-primary/30 bg-primary/5 px-3 py-2 font-mono text-base font-bold tracking-wider">
+                  {tokens[selectedPlatform] ?? "Loading…"}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={copyProofCode}
+                  disabled={!tokens[selectedPlatform]}
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+              </div>
+            </div>
+
+            <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+              <li>Open {platformInfo.bioHint}.</li>
+              <li>Paste the code above into your bio or description.</li>
+              <li>Take a screenshot of your public profile showing both the code and your follower count.</li>
+            </ol>
+
+            <div className="space-y-2">
+              <Label htmlFor="screenshot">Verification screenshot</Label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 hover:border-primary">
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  {screenshot ? screenshot.name : "Choose screenshot (PNG, JPEG, or WebP; max 10MB)"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Your follower count is <strong>never auto-verified</strong> — an admin reviews this
+                screenshot to confirm you own the account.
+              </p>
+            </div>
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(1)}>
+                <ChevronLeft className="h-4 w-4" /> Back
+              </Button>
+              <Button onClick={() => setStep(3)} disabled={!canLeaveVerify}>
+                Continue <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Review */}
+        {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-medium">Review and submit</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Confirm the details below. You can fix anything by going back.
+              </p>
+            </div>
+
+            <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Platform</span>
+                <span className="font-medium">{platformInfo.icon} {platformInfo.label}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Handle</span>
+                <span className="font-medium">@{handle}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Followers</span>
+                <span className="font-mono font-medium">{(followerCount ?? 0).toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Tier</span>
+                <span className={tier ? `font-medium ${TIER_LABELS[tier].color}` : "font-medium"}>
+                  {tier ? TIER_LABELS[tier].label : "Below minimum"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Screenshot</span>
+                <span className="font-medium">{screenshot ? screenshot.name : "None"}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+              <Button variant="outline" onClick={() => setStep(2)}>
+                <ChevronLeft className="h-4 w-4" /> Back
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" onClick={handleSkip} disabled={submitting}>
+                  Skip for now
+                </Button>
+                <Button onClick={submitVerification} disabled={submitting}>
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Submitting…</>
+                  ) : (
+                    <>Submit for review <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
-  );
-}
-
-export default function ConnectSocialPage() {
-  return (
-    <Suspense fallback={<div className="flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
-      <ConnectSocialPageInner />
-    </Suspense>
   );
 }

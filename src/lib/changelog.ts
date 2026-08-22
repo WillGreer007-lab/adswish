@@ -25,7 +25,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Full audit with weighted scoring (signature, token match, authenticity, cross-platform) and an immutable audit log.",
       "A five-step business dashboard (Select Platforms → Tokens → Identity → Audit → Authenticity) with a lock banner, monospace token cards, proof-of-identity cards, and a circular score ring.",
       "Creator tiers now follow a clean 10× ladder — Small 10K, Moderate 100K, Big 1M — applied consistently across onboarding, eligibility, the marketplace, and SocialVerify platform minimums.",
-      "Creator onboarding Step 2 now shows the per-account proof-of-ownership code and the exact steps to verify (paste the code in your bio → screenshot → admin review), so new creators can prove ownership before they even finish signing up.",
+      "Creator onboarding Step 2 is now a dedicated four-step wizard (Platform → Details → Verify → Review) with a progress bar — pick a platform, enter your handle and followers to see your tier live, copy your per-account proof code into your bio, and upload a screenshot for admin review, all before advancing. The Instagram/TikTok OAuth dead-ends were removed so manual verification is the one clear path.",
     ],
   },
   {

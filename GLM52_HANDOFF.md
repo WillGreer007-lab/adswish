@@ -1,5 +1,27 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — Creator onboarding Step 2 multi-step wizard (Aug 22, NOT pushed)
+
+- **`connect_social` rewritten as a 4-step wizard** (Platform → Details → Verify →
+  Review) with a progress bar. Step 1 = 4 platform cards (min 10,000 each);
+  Step 2 = handle + follower count with live tier preview (Small/Moderate/Big);
+  Step 3 = per-account `ADSWISH-…` proof code + Copy button + platform-specific
+  bio instructions + screenshot upload; Step 4 = review summary + submit for
+  admin review (or skip).
+- **OAuth dead-ends removed:** the "Connect with Instagram" button, the TikTok/YouTube
+  OAuth entry points, `startOAuth`, `oauthLoading`, and the
+  `?error=instagram_not_configured` banner are all gone from onboarding. Manual
+  verification is now the single clear path. (The OAuth *routes* are left in place.)
+- **Removed `useSearchParams`** so the page now prerenders static (build shows
+  `○ /onboarding/creator/connect_social`). The YouTube auto-verify component was
+  dropped from onboarding too — manual is primary and complete; YouTube ownership
+  code + auto-verify still live in the dashboard.
+- **Verified:** typecheck ✓ · lint 0 errors (6 pre-existing warnings) ·
+  254 tests ✓ · build ✓. Walked the wizard in the preview (creator side): all four
+  steps render, code displays, Continue gates on a screenshot. **NOT pushed.**
+
+---
+
 ## Latest — Token display fix + 10K/100K/1M tier ladder (Aug 22, NOT pushed)
 
 - **Token step fixed:** the business SocialVerify flow now generates tokens on
