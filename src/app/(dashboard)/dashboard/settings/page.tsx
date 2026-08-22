@@ -4,7 +4,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Bell, Radar, CreditCard, Download, ArrowRight, Clock, ShieldCheck } from "lucide-react";
 import { AppearanceSettings } from "@/components/dashboard/appearance-settings";
-import { DeleteAccountButton } from "@/components/dashboard/delete-account-button";
 import { VerificationMethods } from "@/components/dashboard/verification-methods";
 
 export const metadata = { title: "Settings — Adswish" };
@@ -113,8 +112,6 @@ export default async function SettingsPage() {
             )}
           </div>
         )}
-
-        <DeleteAccountButton />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((card) => {

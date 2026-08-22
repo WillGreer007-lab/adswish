@@ -6,6 +6,7 @@ import { Sparkles, CheckCircle2, Crown } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { CreatorLinksEditor } from "@/components/dashboard/creator-links-editor";
+import { DeleteAccountButton } from "@/components/dashboard/delete-account-button";
 import { tierColor, tierLabel } from "@/lib/tier";
 
 export default async function CreatorProfilePage({
@@ -126,6 +127,8 @@ export default async function CreatorProfilePage({
             }}
           />
         </div>
+
+        <DeleteAccountButton />
       </div>
     </DashboardShell>
   );

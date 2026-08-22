@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Building2, Users2 } from "lucide-react";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { TeamManagement } from "@/components/dashboard/team-management";
+import { DeleteAccountButton } from "@/components/dashboard/delete-account-button";
 
 export default async function BusinessProfilePage({
   searchParams,
@@ -133,6 +134,8 @@ export default async function BusinessProfilePage({
             />
           </div>
         </div>
+
+        {!isTeamMember && <DeleteAccountButton />}
       </div>
     </DashboardShell>
   );
