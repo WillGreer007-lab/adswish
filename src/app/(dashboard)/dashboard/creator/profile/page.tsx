@@ -4,9 +4,8 @@ import { DashboardShell, EmptyState } from "@/components/dashboard/dashboard-she
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, CheckCircle2, Crown, ShieldCheck } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
-import { SocialConnections } from "@/components/dashboard/social-connections";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
-import { ManualFollowerVerification } from "@/components/dashboard/manual-follower-verification";
+import { VerificationMethods } from "@/components/dashboard/verification-methods";
 import { tierColor, tierLabel } from "@/lib/tier";
 
 export default async function CreatorProfilePage({
@@ -124,7 +123,7 @@ export default async function CreatorProfilePage({
 
         <div className="rounded-lg border border-border bg-surface p-5">
           <h3 className="mb-3 font-heading text-sm font-semibold">Connected accounts</h3>
-          <SocialConnections initial={(socials ?? []) as never} />
+          <VerificationMethods initial={(socials ?? []) as never} />
           {(socials ?? []).some((s) => s.verified_at) && (
             <a
               href={`/audit/${user.id}`}
@@ -135,8 +134,6 @@ export default async function CreatorProfilePage({
             </a>
           )}
         </div>
-
-        <ManualFollowerVerification />
       </div>
     </DashboardShell>
   );

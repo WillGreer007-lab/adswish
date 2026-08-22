@@ -4,10 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Instagram, Youtube, Music2, Unlink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { YouTubeHandleVerify } from "@/components/dashboard/youtube-handle-verify";
 import { TwitterIcon } from "@/components/ui/oauth-icons";
 
-type SocialAccount = {
+export type SocialAccount = {
   id: string;
   platform: "tiktok" | "instagram" | "youtube" | "twitter";
   handle: string;
@@ -22,6 +21,11 @@ const PLATFORMS: { id: "tiktok" | "instagram" | "youtube" | "twitter"; label: st
   { id: "twitter", label: "Twitter/X", Icon: TwitterIcon },
 ];
 
+/**
+ * The connected-accounts list + disconnect control. Connection itself happens
+ * through the verification method picker (automation setup or manual sign up),
+ * so this component only shows what is already connected.
+ */
 export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<SocialAccount[]>(initial);
@@ -53,63 +57,12 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap gap-2">
-        {PLATFORMS.map(({ id, label, Icon }) => {
-          const connected = accounts.some((a) => a.platform === id);
-          if (connected) {
-            return (
-              <div key={id} className="flex items-center gap-2 rounded-full border border-border bg-muted/50 px-3 py-1.5 text-sm">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium">{label}</span>
-                <button
-                  type="button"
-                  onClick={() => disconnect(id)}
-                  disabled={disconnecting === id}
-                  className="ml-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
-                  aria-label={`Disconnect ${label}`}
-                >
-                  {disconnecting === id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
-                  Disconnect
-                </button>
-              </div>
-            );
-          }
-          // TikTok, Instagram, and Twitter/X Connect are disabled — use the
-          // token-in-bio + screenshot path instead (no privileged API needed).
-          if (id === "tiktok" || id === "instagram" || id === "twitter") return null;
-          if (id === "youtube") {
-            // YouTube is self-serve with an ownership proof (challenge code in
-            // the channel About) — no OAuth consent screen, no screenshot/admin.
-            return (
-              <div key={id} className="flex items-center gap-2">
-                <YouTubeHandleVerify
-                  onVerified={(account) => {
-                    setAccounts((prev) => [
-                      ...prev.filter((a) => a.platform !== "youtube"),
-                      {
-                        id: `youtube-${Date.now()}`,
-                        platform: "youtube",
-                        handle: account.handle,
-                        follower_count: account.follower_count,
-                        verified_at: new Date().toISOString(),
-                      },
-                    ]);
-                    router.refresh();
-                  }}
-                />
-              </div>
-            );
-          }
-          return null;
-        })}
-      </div>
-
       {error && <p className="mb-3 text-sm text-destructive">{error}</p>}
 
       {accounts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No social accounts connected yet. Paste your YouTube handle above to verify instantly,
-          or upload a screenshot for manual verification.
+          No social accounts connected yet. Pick a method above — automation setup or manual sign
+          up — to connect your first platform.
         </p>
       ) : (
         <div className="space-y-2">
@@ -125,6 +78,16 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>{s.follower_count?.toLocaleString() ?? 0} followers</span>
                   {s.verified_at ? <Badge variant="success">Verified</Badge> : <Badge variant="outline">Pending</Badge>}
+                  <button
+                    type="button"
+                    onClick={() => disconnect(s.platform)}
+                    disabled={disconnecting === s.platform}
+                    className="ml-1 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/20 disabled:opacity-50"
+                    aria-label={`Disconnect ${s.platform}`}
+                  >
+                    {disconnecting === s.platform ? <Loader2 className="h-3 w-3 animate-spin" /> : <Unlink className="h-3 w-3" />}
+                    Disconnect
+                  </button>
                 </div>
               </div>
             );
