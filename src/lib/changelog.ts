@@ -26,6 +26,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       "A five-step business dashboard (Select Platforms → Tokens → Identity → Audit → Authenticity) with a lock banner, monospace token cards, proof-of-identity cards, and a circular score ring.",
       "Creator tiers now follow a clean 10× ladder — Small 10K, Moderate 100K, Big 1M — applied consistently across onboarding, eligibility, the marketplace, and SocialVerify platform minimums.",
       "Creator onboarding Step 2 is now a dedicated four-step wizard (Platform → Details → Verify → Review) with a progress bar — pick a platform, enter your handle and followers to see your tier live, copy your per-account proof code into your bio, and upload a screenshot for admin review, all before advancing. The Instagram/TikTok OAuth dead-ends were removed so manual verification is the one clear path.",
+      "Public SocialVerify report for businesses: every campaign is now shareable at /audit/business/:id (plus a no-auth JSON API at /api/v1/audit/business/:id) showing the company, per-platform verification, overall authenticity score, and identity confidence — mirroring the creator audit page.",
+      "The creator dashboard's Connect Instagram/TikTok buttons were removed — YouTube self-serve ownership proof and manual token-in-bio + screenshot verification are now the only connect paths, so no creator hits an unconfigured-OAuth dead end.",
     ],
   },
   {

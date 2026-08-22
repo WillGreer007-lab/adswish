@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Instagram, Youtube, Music2, Link2, Unlink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2, Instagram, Youtube, Music2, Unlink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { YouTubeHandleVerify } from "@/components/dashboard/youtube-handle-verify";
 import { TwitterIcon } from "@/components/ui/oauth-icons";
@@ -26,16 +25,8 @@ const PLATFORMS: { id: "tiktok" | "instagram" | "youtube" | "twitter"; label: st
 export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<SocialAccount[]>(initial);
-  const [connecting, setConnecting] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  function startConnect(platform: "tiktok" | "instagram" | "youtube" | "twitter") {
-    setConnecting(platform);
-    setError(null);
-    // Full-page navigation (provider consent flow) — same pattern as onboarding.
-    window.location.assign(`/api/internal/oauth/${platform}?redirect_to=${encodeURIComponent("/dashboard/creator/profile")}`);
-  }
 
   async function disconnect(platform: "tiktok" | "instagram" | "youtube" | "twitter") {
     setDisconnecting(platform);
@@ -83,9 +74,9 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
               </div>
             );
           }
-          // TikTok + Twitter/X Connect are disabled — use the token-in-bio +
-          // screenshot path instead (no privileged API needed).
-          if (id === "tiktok" || id === "twitter") return null;
+          // TikTok, Instagram, and Twitter/X Connect are disabled — use the
+          // token-in-bio + screenshot path instead (no privileged API needed).
+          if (id === "tiktok" || id === "instagram" || id === "twitter") return null;
           if (id === "youtube") {
             // YouTube is self-serve with an ownership proof (challenge code in
             // the channel About) — no OAuth consent screen, no screenshot/admin.
@@ -109,21 +100,7 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
               </div>
             );
           }
-          return (
-            <Button
-              key={id}
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => startConnect(id)}
-              disabled={connecting !== null}
-              className="gap-2"
-            >
-              {connecting === id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-              <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-              Connect {label}
-            </Button>
-          );
+          return null;
         })}
       </div>
 
@@ -132,7 +109,7 @@ export function SocialConnections({ initial }: { initial: SocialAccount[] }) {
       {accounts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No social accounts connected yet. Paste your YouTube handle above to verify instantly,
-          connect Instagram, or upload a screenshot for manual verification.
+          or upload a screenshot for manual verification.
         </p>
       ) : (
         <div className="space-y-2">

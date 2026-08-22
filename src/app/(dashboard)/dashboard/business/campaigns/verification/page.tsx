@@ -23,6 +23,7 @@ const TABS: { id: Step; label: string }[] = [
 
 interface Campaign {
   id: string;
+  business_id: string;
   status: string;
   selected_platforms: SocialPlatform[];
   domain: string | null;
@@ -152,7 +153,7 @@ export default function VerificationPage() {
       return;
     }
 
-    setCampaign({ id: data.campaign_id, status: "draft", selected_platforms: selected, domain: null, business_name: "" });
+    setCampaign({ id: data.campaign_id, business_id: session.user.id, status: "draft", selected_platforms: selected, domain: null, business_name: "" });
     setSecretKey(data.secret_key);
 
     const rows = await generateTokenRows(data.campaign_id, data.secret_key);
@@ -203,9 +204,21 @@ export default function VerificationPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-semibold">SocialVerify Campaign</h1>
-        <p className="text-sm text-muted-foreground">Independent verification — no API keys, no proprietary apps</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">SocialVerify Campaign</h1>
+          <p className="text-sm text-muted-foreground">Independent verification — no API keys, no proprietary apps</p>
+        </div>
+        {campaign && (
+          <a
+            href={`/audit/business/${campaign.business_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted/50"
+          >
+            View public verification report ↗
+          </a>
+        )}
       </div>
 
       <LockBanner locked={locked} unverified={unverified} selectedCount={selected.length} />

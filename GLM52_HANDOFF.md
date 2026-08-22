@@ -1,5 +1,31 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — Public business SocialVerify report + OAuth dead-end cleanup (Aug 22, NOT pushed)
+
+- **Public business SocialVerify report:** new no-auth JSON API
+  `GET /api/v1/audit/business/:id` and shareable page `/audit/business/:id`
+  (`src/app/(marketing)/audit/business/[id]/page.tsx`). Shows the company name,
+  latest campaign status/domain, per-platform verifications (handle, followers,
+  threshold met, status), and the latest audit (overall score, status, identity
+  confidence, cross-platform). Mirrors the creator `/audit/:creatorId` page.
+- **Link added** to the business SocialVerify dashboard page
+  (`/dashboard/business/campaigns/verification`): a "View public verification
+  report ↗" button (opens `/audit/business/{business_id}`) once a campaign exists.
+- **`social-connections.tsx` OAuth dead-ends removed:** the Connect Instagram
+  button is gone (TikTok/Twitter were already hidden). Only YouTube self-serve
+  ownership proof + the manual token-in-bio/screenshot path remain. Removed the
+  now-dead `startConnect`/`connecting` state and the `Button`/`Link2` imports;
+  lint warnings dropped 6 → 5.
+- **Tested with a brand-new creator account** (`fresh-creator-*@adswish.test`,
+  password FreshPass123!, user `26f354bd-…`): onboarding Step 2 renders the
+  4-step wizard (no OAuth), and the dashboard profile shows only YouTube
+  self-serve + manual verification. Business report verified live against
+  business `5daa90b2-…` (Team E2E Co).
+- **Verified:** typecheck ✓ · lint 0 errors (5 pre-existing warnings) ·
+  254 tests ✓ · build ✓. **NOT pushed.**
+
+---
+
 ## Latest — Creator onboarding Step 2 multi-step wizard (Aug 22, NOT pushed)
 
 - **`connect_social` rewritten as a 4-step wizard** (Platform → Details → Verify →
