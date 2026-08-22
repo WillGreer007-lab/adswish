@@ -1,9 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Check, X, Minus, Loader2, RefreshCw } from "lucide-react";
 
 type CheckResult = { ok: boolean; enabled?: boolean; label: string; detail: string };
+type DiagnosticResult = { ok: boolean; detail: string; enabled?: boolean; configured?: boolean };
+type Diagnostics = {
+  application: DiagnosticResult;
+  database: DiagnosticResult;
+  verifiedDomain: DiagnosticResult;
+  monitorMapping: DiagnosticResult;
+  externalMonitor: DiagnosticResult;
+};
 
 function StatusRow({ result, optional }: { result: CheckResult | null; optional?: boolean }) {
   const ok = result?.ok;
@@ -30,28 +38,39 @@ export function TrackingStatus() {
   const [external, setExternal] = useState<CheckResult | null>(null);
   const [thirdParty, setThirdParty] = useState<CheckResult | null>(null);
   const [fully, setFully] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<Diagnostics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function apply(json: { inhouse: CheckResult; external: CheckResult; thirdParty?: CheckResult; fully_active: boolean }) {
+  function apply(json: {
+    inhouse: CheckResult;
+    external: CheckResult;
+    thirdParty?: CheckResult;
+    diagnostics?: Diagnostics;
+    fully_active: boolean;
+  }) {
     setInhouse(json.inhouse);
     setExternal(json.external);
     setThirdParty(json.thirdParty ?? null);
+    setDiagnostics(json.diagnostics ?? null);
     setFully(Boolean(json.fully_active));
   }
 
-  function check() {
+  function setFailureState(detail: string) {
+    setInhouse({ ok: false, label: "In-house pixel check", detail });
+    setExternal({ ok: false, label: "External domain check", detail });
+    setThirdParty({ ok: false, label: "Third-party uptime check", detail });
+    setDiagnostics(null);
+    setFully(false);
+  }
+
+  const check = useCallback(() => {
     setLoading(true);
     fetch("/api/internal/tracking/status")
       .then((r) => r.json())
       .then((json) => apply(json))
-      .catch(() => {
-        setInhouse({ ok: false, label: "In-house pixel check", detail: "Could not reach the check API" });
-        setExternal({ ok: false, label: "External domain check", detail: "Could not reach the check API" });
-        setThirdParty({ ok: false, label: "Third-party uptime check", detail: "Could not reach the check API" });
-        setFully(false);
-      })
+      .catch(() => setFailureState("Could not reach the check API"))
       .finally(() => setLoading(false));
-  }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,11 +80,7 @@ export function TrackingStatus() {
         if (!cancelled) apply(json);
       })
       .catch(() => {
-        if (cancelled) return;
-        setInhouse({ ok: false, label: "In-house pixel check", detail: "Could not reach the check API" });
-        setExternal({ ok: false, label: "External domain check", detail: "Could not reach the check API" });
-        setThirdParty({ ok: false, label: "Third-party uptime check", detail: "Could not reach the check API" });
-        setFully(false);
+        if (!cancelled) setFailureState("Could not reach the check API");
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -74,6 +89,12 @@ export function TrackingStatus() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const onMonitorUpdated = () => check();
+    window.addEventListener("adswish:tracking-monitor-updated", onMonitorUpdated);
+    return () => window.removeEventListener("adswish:tracking-monitor-updated", onMonitorUpdated);
+  }, [check]);
 
   return (
     <div className="rounded-lg border border-border bg-surface p-5">
@@ -103,6 +124,35 @@ export function TrackingStatus() {
         <StatusRow result={external} />
         <StatusRow result={thirdParty} optional />
       </div>
+
+      {diagnostics && (
+        <details className="mt-5 rounded-md border border-border bg-background p-3">
+          <summary className="cursor-pointer text-xs font-semibold text-muted-foreground">
+            View tracking diagnostics
+          </summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(diagnostics).map(([key, result]) => (
+              <div key={key} className="rounded-md border border-border p-3">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${result.ok ? "bg-success" : "bg-destructive"}`} />
+                  <p className="text-xs font-medium">
+                    {key === "verifiedDomain"
+                      ? "Verified domain"
+                      : key === "monitorMapping"
+                        ? "Monitor mapping"
+                        : key === "externalMonitor"
+                          ? "External monitor"
+                          : key === "application"
+                            ? "Application"
+                            : "Database"}
+                  </p>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{result.detail}</p>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

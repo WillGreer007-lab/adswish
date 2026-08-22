@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { TrackingMethodToggle, type TrackingMethod } from "@/components/dashboard/tracking-method-toggle";
 import { TrackingStatus } from "@/components/dashboard/tracking-status";
 import { ChromeExtensionNotice } from "@/components/dashboard/chrome-extension-notice";
+import { UptimeMonitorSettings } from "@/components/dashboard/uptime-monitor-settings";
 import { Code2, Puzzle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +19,7 @@ export default async function BusinessTrackingPage() {
 
   const { data: profile } = await supabase
     .from("business_profiles")
-    .select("company_name, verified_domain, onboarding_step, tracking_method")
+    .select("company_name, verified_domain, uptime_robot_monitor_id, onboarding_step, tracking_method")
     .eq("user_id", user.id)
     .single();
 
@@ -61,21 +62,27 @@ export default async function BusinessTrackingPage() {
 
         {/* Third-party uptime layer (optional) */}
         <div className="rounded-lg border border-dashed border-border bg-surface p-5">
-          <h2 className="font-heading text-sm font-semibold">Add an independent uptime monitor (optional)</h2>
+          <h2 className="font-heading text-sm font-semibold">Independent uptime &amp; health monitoring</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             The third check uses <strong className="text-foreground">UptimeRobot</strong> to watch your domain
-            from outside Adswish. Once configured, all three checks must be green before you can launch
-            affiliate or hybrid campaigns.
+            from outside Adswish. Adswish also exposes a safe application readiness check at{" "}
+            <code className="rounded bg-muted px-1">/api/health</code> and a public status page at{" "}
+            <code className="rounded bg-muted px-1">/status</code>.
           </p>
           <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>Create a free account at <strong>uptimerobot.com</strong>.</li>
             <li>Click <strong>+ New monitor</strong> → type <strong>HTTP(s)</strong> → URL ={" "}
               <span className="font-mono text-foreground">{profile.verified_domain || "your verified domain"}</span> → create it.</li>
             <li>Open <strong>My Settings → API Settings</strong> → create a <strong>Read-only API key</strong> → copy it.</li>
-            <li>Add it to the platform as the <code className="rounded bg-muted px-1">UPTIME_ROBOT_API_KEY</code> environment variable
-              (an admin does this in Vercel → Environment Variables).</li>
+            <li>An administrator stores the read-only key server-side as <code className="rounded bg-muted px-1">UPTIME_ROBOT_API_KEY</code>;
+              never paste API keys into this page.</li>
+            <li>Use the monitor ID field below, or ask an administrator to create/update a monitor for the verified domain.</li>
             <li>Return here and press <strong>Check again</strong> — the third tick turns green when UptimeRobot reports your domain as up.</li>
           </ol>
+          <UptimeMonitorSettings
+            initialMonitorId={profile.uptime_robot_monitor_id}
+            verifiedDomain={profile.verified_domain}
+          />
         </div>
 
         <div className="rounded-lg border border-border bg-surface p-5">

@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Users, AlertTriangle, ShieldAlert, FileText, Activity, Gavel, BadgeCheck } from "lucide-react";
+import { DollarSign, Users, AlertTriangle, ShieldAlert, FileText, Activity, Gavel, BadgeCheck, MonitorUp } from "lucide-react";
 import Link from "next/link";
 import { OAuthProviderToggle } from "@/components/admin/oauth-provider-toggle";
 
@@ -132,6 +132,19 @@ export default async function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-background/60">First-party analytics and crash reporting</p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/admin/uptime">
+          <Card className="bg-surface/5 border-background/10 hover:bg-surface/10 transition-colors">
+            <CardHeader>
+              <CardTitle className="text-background flex items-center gap-2">
+                <MonitorUp className="h-5 w-5" /> Uptime monitoring
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-background/60">Credential health, monitor history, and incidents</p>
             </CardContent>
           </Card>
         </Link>

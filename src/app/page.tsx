@@ -633,6 +633,7 @@ export default function LandingPage() {
                 <li><Link href="/legal/privacy" className="hover:text-foreground transition-colors">Privacy</Link></li>
                 <li><Link href="/legal/subprocessors" className="hover:text-foreground transition-colors">Subprocessors</Link></li>
                 <li><Link href="/legal/changelog" className="hover:text-foreground transition-colors">Changelog</Link></li>
+                <li><Link href="/status" className="hover:text-foreground transition-colors">System status</Link></li>
               </ul>
             </div>
           </div>

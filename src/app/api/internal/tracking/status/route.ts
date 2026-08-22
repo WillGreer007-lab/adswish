@@ -1,113 +1,123 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getUptimeRobotMonitors, uptimeRobotKey } from "@/lib/uptime-robot";
 
 function normalizeDomain(domain: string): string {
   const trimmed = domain.trim().replace(/\/+$/, "");
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-/**
- * Optional third layer: UptimeRobot monitors the verified domain and reports
- * up/down independently of our own servers. Only active when
- * UPTIME_ROBOT_API_KEY is set; when configured it participates in the
- * `fully_active` gate. UptimeRobot monitor `status`:
- *   0 = paused, 1 = not checked yet, 2 = up, 8 = seems down, 9 = down.
- */
-async function uptimeRobotCheck(domain: string | undefined): Promise<{
+function domainHostname(domain: string): string | null {
+  try {
+    return new URL(normalizeDomain(domain)).hostname;
+  } catch {
+    return null;
+  }
+}
+
+type ThirdPartyResult = {
   enabled: boolean;
   ok: boolean;
   detail: string;
-}> {
-  const apiKey = process.env.UPTIME_ROBOT_API_KEY;
-  if (!apiKey) {
+  mappingConfigured: boolean;
+  mappingOk: boolean;
+};
+
+/**
+ * Check UptimeRobot without exposing credentials. A mapped monitor uses the
+ * monitor-scoped key when available; an unmapped business uses the read-only
+ * key and falls back to verified-hostname matching.
+ */
+async function uptimeRobotCheck(
+  domain: string | undefined,
+  monitorId: string | null | undefined,
+): Promise<ThirdPartyResult> {
+  const mappingConfigured = Boolean(monitorId);
+  const key = uptimeRobotKey(mappingConfigured ? "monitor" : "read");
+
+  if (!key) {
     return {
       enabled: false,
       ok: false,
-      detail: "Not configured — add UPTIME_ROBOT_API_KEY to enable",
+      detail: "Not configured — an UptimeRobot read-only key is required",
+      mappingConfigured,
+      mappingOk: !mappingConfigured,
     };
   }
   if (!domain) {
-    return { enabled: true, ok: false, detail: "No verified domain yet" };
-  }
-
-  const host = domain.replace(/^https?:\/\//i, "").replace(/\/+$/, "");
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch("https://api.uptimerobot.com/v2/getMonitors", {
-      method: "POST",
-      signal: controller.signal,
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ api_key: apiKey, format: "json", logs: "0" }),
-      cache: "no-store",
-    });
-    clearTimeout(timer);
-
-    if (!res.ok) {
-      return { enabled: true, ok: false, detail: `UptimeRobot HTTP ${res.status}` };
-    }
-
-    const json = (await res.json()) as {
-      stat?: string;
-      monitors?: Array<{ url?: string; friendly_name?: string; status?: number }>;
-    };
-    if (json.stat !== "ok") {
-      return { enabled: true, ok: false, detail: "UptimeRobot API error" };
-    }
-
-    const match = (json.monitors ?? []).find((m) => {
-      try {
-        return new URL(m.url ?? "").hostname === host;
-      } catch {
-        return false;
-      }
-    });
-
-    if (!match) {
-      return { enabled: true, ok: false, detail: `${host} is not monitored in UptimeRobot yet` };
-    }
-
-    const up = match.status === 2;
     return {
       enabled: true,
-      ok: up,
-      detail: `${match.friendly_name || host} — ${up ? "up" : match.status === 0 ? "paused" : "down"}`,
+      ok: false,
+      detail: "No verified domain yet",
+      mappingConfigured,
+      mappingOk: false,
     };
-  } catch {
-    return { enabled: true, ok: false, detail: "UptimeRobot unreachable" };
   }
+
+  const result = await getUptimeRobotMonitors({ monitorId, key });
+  if (!result.ok) {
+    return {
+      enabled: true,
+      ok: false,
+      detail: result.httpStatus === 0 ? "UptimeRobot unreachable" : "UptimeRobot API rejected the request",
+      mappingConfigured,
+      mappingOk: false,
+    };
+  }
+
+  const host = domainHostname(domain);
+  const match = mappingConfigured
+    ? result.monitors.find((monitor) => String(monitor.id) === monitorId)
+    : result.monitors.find((monitor) => domainHostname(monitor.url ?? "") === host);
+
+  if (!match) {
+    return {
+      enabled: true,
+      ok: false,
+      detail: mappingConfigured
+        ? `Mapped UptimeRobot monitor ${monitorId} was not found`
+        : `${host ?? domain} is not monitored in UptimeRobot yet`,
+      mappingConfigured,
+      mappingOk: false,
+    };
+  }
+
+  const up = match.status === 2;
+  return {
+    enabled: true,
+    ok: up,
+    detail: `${match.friendly_name || host || "Mapped monitor"} — ${
+      up ? "up" : match.status === 0 ? "paused" : match.status === 1 ? "not checked yet" : "down"
+    }`,
+    mappingConfigured,
+    mappingOk: true,
+  };
 }
 
 /**
  * GET /api/internal/tracking/status
- * Checks, all of which must pass before tracking is "fully active":
- *   1. in-house  — a live pixel heartbeat (campaign.pixel_status = active) or
- *                  a non-revoked tracking link owned by the business.
- *   2. external  — the verified domain is reachable over HTTPS.
- *   3. thirdParty (optional) — UptimeRobot reports the domain as up.
+ *
+ * The response separates the in-house pixel/link check, verified-domain
+ * reachability, and optional UptimeRobot check so the dashboard can explain
+ * exactly which prerequisite is blocking tracking.
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (user.user_metadata?.role !== "business") {
     return NextResponse.json({ error: "Business account required" }, { status: 403 });
   }
 
   const { data: profile } = await supabase
     .from("business_profiles")
-    .select("verified_domain")
+    .select("verified_domain, uptime_robot_monitor_id")
     .eq("user_id", user.id)
     .single();
 
-  // In-house check: a live pixel heartbeat (last 24h) or a tracking link that
-  // has actually been used. A merely-existing, never-clicked tracking link no
-  // longer counts (fixes the "green with no setup" false positive).
   const [campaigns, links] = await Promise.all([
     supabase
       .from("campaigns")
@@ -121,15 +131,16 @@ export async function GET(request: NextRequest) {
       .is("revoked_at", null),
   ]);
 
+  const databaseOk = !campaigns.error && !links.error;
   const DAY_MS = 24 * 60 * 60 * 1000;
   const hasLivePixel = (campaigns.data ?? []).some(
-    (c) =>
-      c.pixel_status === "active" &&
-      c.last_pixel_ping_at &&
-      Date.now() - new Date(c.last_pixel_ping_at).getTime() < DAY_MS,
+    (campaign) =>
+      campaign.pixel_status === "active" &&
+      campaign.last_pixel_ping_at &&
+      Date.now() - new Date(campaign.last_pixel_ping_at).getTime() < DAY_MS,
   );
 
-  const linkIds = (links.data ?? []).map((l: { id: string }) => l.id);
+  const linkIds = (links.data ?? []).map((link: { id: string }) => link.id);
   let hasClickedLink = false;
   if (linkIds.length > 0) {
     const { data: clicks } = await supabase
@@ -140,16 +151,14 @@ export async function GET(request: NextRequest) {
     hasClickedLink = (clicks ?? []).length > 0;
   }
 
-  // External check: is the verified domain reachable?
   const domain = profile?.verified_domain;
   let externalOk = false;
   let externalDetail = "No verified domain yet";
   if (domain) {
-    const url = normalizeDomain(domain);
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 8000);
-      const res = await fetch(url, {
+      const response = await fetch(normalizeDomain(domain), {
         method: "GET",
         signal: controller.signal,
         redirect: "follow",
@@ -157,19 +166,16 @@ export async function GET(request: NextRequest) {
         headers: { "User-Agent": "Adswish-Tracking-Check/1.0" },
       });
       clearTimeout(timer);
-      externalOk = res.status < 400;
-      externalDetail = `${domain} → HTTP ${res.status}`;
+      externalOk = response.status < 400;
+      externalDetail = `${domain} → HTTP ${response.status}`;
     } catch {
-      externalOk = false;
       externalDetail = `${domain} unreachable`;
     }
   }
 
-  const thirdParty = await uptimeRobotCheck(domain);
-
+  const thirdParty = await uptimeRobotCheck(domain, profile?.uptime_robot_monitor_id);
   const inhouseOk = hasLivePixel || hasClickedLink;
-  const fullyActive =
-    inhouseOk && externalOk && (!thirdParty.enabled || thirdParty.ok);
+  const fullyActive = inhouseOk && externalOk && (!thirdParty.enabled || thirdParty.ok);
 
   return NextResponse.json({
     inhouse: {
@@ -191,6 +197,34 @@ export async function GET(request: NextRequest) {
       enabled: thirdParty.enabled,
       label: "Third-party uptime check",
       detail: thirdParty.detail,
+    },
+    diagnostics: {
+      application: {
+        ok: true,
+        detail: "Adswish tracking status endpoint is responding",
+      },
+      database: {
+        ok: databaseOk,
+        detail: databaseOk ? "Tracking tables are reachable" : "Tracking data could not be read",
+      },
+      verifiedDomain: {
+        ok: Boolean(domain),
+        detail: domain ? `Verified domain: ${domain}` : "Add and verify a business domain",
+      },
+      monitorMapping: {
+        ok: thirdParty.mappingOk,
+        configured: thirdParty.mappingConfigured,
+        detail: thirdParty.mappingConfigured
+          ? thirdParty.mappingOk
+            ? "Mapped monitor was found for this account"
+            : "Mapped monitor could not be found with the configured key"
+          : "Hostname matching is active; no explicit monitor mapping",
+      },
+      externalMonitor: {
+        ok: thirdParty.ok,
+        enabled: thirdParty.enabled,
+        detail: thirdParty.detail,
+      },
     },
     fully_active: fullyActive,
   });
