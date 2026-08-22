@@ -3,9 +3,9 @@ export type Tier = "micro" | "mid" | "macro";
 export function getCreatorTier(
   followerCount: number,
 ): Tier | null {
-  if (followerCount < 1000) return null;
-  if (followerCount < 10000) return "micro";
-  if (followerCount < 100000) return "mid";
+  if (followerCount < 10000) return null;
+  if (followerCount < 100000) return "micro";
+  if (followerCount < 1000000) return "mid";
   return "macro";
 }
 

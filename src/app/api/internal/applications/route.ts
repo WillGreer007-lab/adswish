@@ -68,11 +68,11 @@ export async function POST(request: NextRequest) {
   }
 
   const hasVerifiedSocial = (creatorSocial?.data ?? []).some(
-    (account) => Boolean(account.verified_at) && !account.disconnected_at && Number(account.follower_count ?? 0) >= 1000,
+    (account) => Boolean(account.verified_at) && !account.disconnected_at && Number(account.follower_count ?? 0) >= 10000,
   );
   if (!hasVerifiedSocial) {
     return NextResponse.json(
-      { error: "Verify at least one TikTok, Instagram, or YouTube account with 1,000+ followers before applying." },
+      { error: "Verify at least one TikTok, Instagram, or YouTube account with 10,000+ followers before applying." },
       { status: 422 },
     );
   }

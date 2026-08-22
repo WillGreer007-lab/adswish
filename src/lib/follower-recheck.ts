@@ -16,9 +16,9 @@ export type RecheckPlatform = "tiktok" | "instagram" | "youtube" | "twitter";
 
 export const TIER_THRESHOLDS = {
   /** below this = no tier */
-  minMicro: 1_000,
-  minMid: 10_000,
-  minMacro: 100_000,
+  minMicro: 10_000,
+  minMid: 100_000,
+  minMacro: 1_000_000,
 } as const;
 
 export function tierForFollowers(count: number): "micro" | "mid" | "macro" | null {

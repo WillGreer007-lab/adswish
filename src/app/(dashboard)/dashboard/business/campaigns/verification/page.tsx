@@ -93,9 +93,40 @@ export default function VerificationPage() {
     loadCampaign();
   }, [supabase]);
 
+  const generateTokenRows = async (campaignId: string, key: string): Promise<TokenRow[]> => {
+    const next: TokenRow[] = [];
+    for (const platform of selected) {
+      const handle = (handles[platform] || "").trim();
+      if (!handle) continue;
+      const res = await fetch("/api/internal/verification/tokens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaign_id: campaignId, platform, handle, secret_key: key }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        next.push({
+          platform,
+          handle,
+          display_code: data.display_code,
+          expires_at: data.expires_at,
+          status: "pending",
+          follower_count: 0,
+          follower_threshold: PLATFORM_THRESHOLDS[platform],
+        });
+      }
+    }
+    return next;
+  };
+
   const createCampaign = async () => {
     if (selected.length === 0) {
       setError("Select at least one platform");
+      return;
+    }
+    const missing = selected.filter((p) => !(handles[p] || "").trim());
+    if (missing.length > 0) {
+      setError(`Enter a handle for: ${missing.join(", ")}`);
       return;
     }
     setLoading(true);
@@ -123,42 +154,22 @@ export default function VerificationPage() {
 
     setCampaign({ id: data.campaign_id, status: "draft", selected_platforms: selected, domain: null, business_name: "" });
     setSecretKey(data.secret_key);
+
+    const rows = await generateTokenRows(data.campaign_id, data.secret_key);
+    setTokens(rows);
     setStep("tokens");
     setLoading(false);
   };
 
-  const generateTokens = async () => {
+  const regenerateTokens = async () => {
     if (!campaign || !secretKey) {
       setError("Create the campaign first (secret key missing)");
       return;
     }
     setLoading(true);
     setError(null);
-
-    const next: TokenRow[] = [];
-    for (const platform of selected) {
-      const handle = handles[platform] || "";
-      if (!handle) continue;
-      const res = await fetch("/api/internal/verification/tokens", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ campaign_id: campaign.id, platform, handle, secret_key: secretKey }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        next.push({
-          platform,
-          handle,
-          display_code: data.display_code,
-          expires_at: data.expires_at,
-          status: "pending",
-          follower_count: 0,
-          follower_threshold: PLATFORM_THRESHOLDS[platform],
-        });
-      }
-    }
-    setTokens(next);
-    setStep("identity");
+    const rows = await generateTokenRows(campaign.id, secretKey);
+    setTokens(rows);
     setLoading(false);
   };
 
@@ -284,16 +295,26 @@ export default function VerificationPage() {
             </div>
           </div>
 
-          {campaign && secretKey && (
+          <div className="flex gap-2">
+            {tokens.length === 0 && campaign && secretKey && (
+              <button
+                type="button"
+                onClick={regenerateTokens}
+                disabled={loading}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted/50 disabled:opacity-50"
+              >
+                {loading ? "Generating..." : "Generate Tokens"}
+              </button>
+            )}
             <button
               type="button"
-              onClick={generateTokens}
-              disabled={loading}
+              onClick={() => setStep("identity")}
+              disabled={loading || tokens.length === 0}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {loading ? "Generating..." : "Continue to Identity"}
+              Continue to Identity
             </button>
-          )}
+          </div>
         </div>
       )}
 

@@ -24,6 +24,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Signed domain manifest at /.well-known/social-verification.json — a cryptographically signed, public record of your verified accounts that anyone can audit independently.",
       "Full audit with weighted scoring (signature, token match, authenticity, cross-platform) and an immutable audit log.",
       "A five-step business dashboard (Select Platforms → Tokens → Identity → Audit → Authenticity) with a lock banner, monospace token cards, proof-of-identity cards, and a circular score ring.",
+      "Creator tiers now follow a clean 10× ladder — Small 10K, Moderate 100K, Big 1M — applied consistently across onboarding, eligibility, the marketplace, and SocialVerify platform minimums.",
+      "Creator onboarding Step 2 now shows the per-account proof-of-ownership code and the exact steps to verify (paste the code in your bio → screenshot → admin review), so new creators can prove ownership before they even finish signing up.",
     ],
   },
   {

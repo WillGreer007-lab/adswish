@@ -39,7 +39,7 @@ describe("buildManifest", () => {
   it("computes thresholds and threshold_met", () => {
     const m = buildSample();
     const yt = m.accounts[0];
-    expect(yt.follower_threshold).toBe(1000);
+    expect(yt.follower_threshold).toBe(10000);
     expect(yt.threshold_met).toBe(true);
     expect(yt.url).toContain("youtube.com");
   });

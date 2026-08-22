@@ -1,5 +1,23 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
+## Latest — Token display fix + 10K/100K/1M tier ladder (Aug 22, NOT pushed)
+
+- **Token step fixed:** the business SocialVerify flow now generates tokens on
+  campaign creation and DISPLAYS them (monospace cards + Copy + expiry +
+  `0 / 10,000` threshold) before "Continue to Identity".
+- **Tier ladder unified to 10×: Small 10K / Moderate 100K / Big 1M.** Updated
+  `tier.ts` (`getCreatorTier`), `follower-recheck.ts` (`TIER_THRESHOLDS`),
+  `socialverify/tokens.ts` (`PLATFORM_THRESHOLDS` → 10_000 for all four),
+  applications eligibility (10K+), admin audit `threshold`, onboarding copy,
+  creator grid filter, and the getting-started guide. Tests updated (254).
+- **Creator onboarding Step 2 (`connect_social`)** now fetches the
+  per-account proof token from `/api/internal/manual-verifications` and shows a
+  "Prove you own this account" section (3 numbered steps + the `ADSWISH-…` code).
+- **Verified:** typecheck ✓ · lint 0 errors · 254 tests ✓ · build ✓.
+  Demoed both creator + business flows in the preview. **NOT pushed.**
+
+---
+
 ## Latest — SocialVerify system (Aug 22, NOT pushed)
 
 - **Migration 052 (APPLIED):** `verification_campaigns`, `platform_verifications`,

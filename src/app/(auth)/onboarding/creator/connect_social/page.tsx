@@ -20,16 +20,16 @@ const PLATFORMS: { id: Platform; label: string }[] = [
 ];
 
 function getTier(followerCount: number): "micro" | "mid" | "macro" | null {
-  if (followerCount < 1000) return null;
-  if (followerCount < 10000) return "micro";
-  if (followerCount < 100000) return "mid";
+  if (followerCount < 10000) return null;
+  if (followerCount < 100000) return "micro";
+  if (followerCount < 1000000) return "mid";
   return "macro";
 }
 
 const TIER_LABELS: Record<string, { label: string; color: string }> = {
-  micro: { label: "Small Creator (1K–9.9K)", color: "text-emerald-600" },
-  mid: { label: "Moderate Creator (10K–99.9K)", color: "text-blue-600" },
-  macro: { label: "Big Creator (100K+)", color: "text-violet-600" },
+  micro: { label: "Small Creator (10K–99.9K)", color: "text-emerald-600" },
+  mid: { label: "Moderate Creator (100K–999.9K)", color: "text-blue-600" },
+  macro: { label: "Big Creator (1M+)", color: "text-violet-600" },
 };
 
 function ConnectSocialPageInner() {
@@ -43,6 +43,7 @@ function ConnectSocialPageInner() {
   const [followerCount, setFollowerCount] = useState<number | null>(null);
   const [tier, setTier] = useState<"micro" | "mid" | "macro" | null>(null);
   const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [tokens, setTokens] = useState<Record<string, string>>({});
   const [connectedAccounts, setConnectedAccounts] = useState<any[]>([]);
   const err = searchParams.get("error");
   const oauthError = err === "tiktok_not_configured"
@@ -95,6 +96,16 @@ function ConnectSocialPageInner() {
         .eq("creator_id", user.id);
       setConnectedAccounts(accounts || []);
 
+      try {
+        const tokenRes = await fetch("/api/internal/manual-verifications");
+        if (tokenRes.ok) {
+          const tokenData = await tokenRes.json();
+          setTokens(tokenData.tokens ?? {});
+        }
+      } catch {
+        // tokens are optional — the form still works without them
+      }
+
       if (accounts && accounts.length > 0) {
         const first = accounts[0];
         setSelectedPlatform(first.platform);
@@ -121,8 +132,8 @@ function ConnectSocialPageInner() {
     e.preventDefault();
     if (!userId) return;
 
-    if (followerCount === null || followerCount < 1000) {
-      alert("You need at least 1,000 followers on at least one platform to join Adswish. If your platform doesn't expose follower count, upload a screenshot for manual verification.");
+    if (followerCount === null || followerCount < 10000) {
+      alert("You need at least 10,000 followers on at least one platform to join Adswish. If your platform doesn't expose follower count, upload a screenshot for manual verification.");
       return;
     }
 
@@ -190,7 +201,7 @@ function ConnectSocialPageInner() {
       <CardHeader>
         <CardTitle>Connect a social account</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Step 2 of 4 — You need at least 1,000 followers to join.
+          Step 2 of 4 — You need at least 10,000 followers to join.
         </p>
       </CardHeader>
       <CardContent>
@@ -308,12 +319,26 @@ function ConnectSocialPageInner() {
                 Assigned tier: {TIER_LABELS[tier].label}
               </p>
             )}
-            {followerCount !== null && followerCount < 1000 && (
+            {followerCount !== null && followerCount < 10000 && (
               <p className="text-sm text-destructive">
-                You need at least 1,000 followers to join Adswish.
+                You need at least 10,000 followers to join Adswish.
               </p>
             )}
           </div>
+
+          {tokens[selectedPlatform] && (
+            <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
+              <p className="font-medium">Prove you own this account</p>
+              <ol className="mt-1 list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+                <li>Paste this code into your {PLATFORMS.find((p) => p.id === selectedPlatform)?.label} bio.</li>
+                <li>Take a screenshot of your profile showing the code.</li>
+                <li>Upload it below — an admin confirms the code matches before your count is verified.</li>
+              </ol>
+              <code className="mt-2 inline-block rounded bg-muted px-2 py-1 font-mono text-base font-bold tracking-wider">
+                {tokens[selectedPlatform]}
+              </code>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="screenshot">Verification screenshot</Label>

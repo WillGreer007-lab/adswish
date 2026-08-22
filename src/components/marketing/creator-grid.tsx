@@ -94,9 +94,9 @@ export function CreatorGrid({ creators }: { creators: CreatorRow[] }) {
           aria-label="Filter by tier"
         >
           <option value="all">All tiers</option>
-          <option value="micro">Small Creator (1K–9.9K)</option>
-          <option value="mid">Moderate Creator (10K–99.9K)</option>
-          <option value="macro">Big Creator (100K+)</option>
+          <option value="micro">Small Creator (10K–99.9K)</option>
+          <option value="mid">Moderate Creator (100K–999.9K)</option>
+          <option value="macro">Big Creator (1M+)</option>
         </select>
         <select
           value={sort}

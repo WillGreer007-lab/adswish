@@ -83,7 +83,7 @@ beforeEach(() => {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ data: { user: { follower_count: 250_000 } } }),
+        json: async () => ({ data: { user: { follower_count: 2_500_000 } } }),
       };
     }
     throw new Error("unexpected fetch " + u);
@@ -106,7 +106,7 @@ describe("recheckFollowerCounts (TikTok)", () => {
     expect(result).toEqual({ accounts: 1, updated: 1, skipped: 0, failed: 0, tiersChanged: 1 });
 
     const social = db.rows.creator_social_accounts[0];
-    expect(social.follower_count).toBe(250_000);
+    expect(social.follower_count).toBe(2_500_000);
     expect(social.verified_at).toBeTruthy();
 
     const profile = db.rows.creator_profiles[0];

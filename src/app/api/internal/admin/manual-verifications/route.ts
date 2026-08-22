@@ -119,8 +119,8 @@ export async function PATCH(request: NextRequest) {
         platform: verification.platform,
         handle: verification.handle,
         follower_count: followerCount,
-        threshold: 1000,
-        threshold_met: followerCount >= 1000,
+        threshold: 10000,
+        threshold_met: followerCount >= 10000,
         verification_token_matched: true,
         tier: tier ?? null,
       });

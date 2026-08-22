@@ -41,7 +41,7 @@ export default function CreatorGettingStartedGuide() {
             <>
               <strong>Connect socials:</strong> link Google/YouTube to verify
               your subscriber count (that determines your tier: Small Creator
-              1k–9.9k, Moderate Creator 10k–99k, Big Creator 100k+). Instagram and TikTok connects
+              10k–99.9k, Moderate Creator 100k–999k, Big Creator 1M+). Instagram and TikTok connects
               are optional extras for social proof.
             </>,
             <>

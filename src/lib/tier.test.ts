@@ -7,27 +7,27 @@ import {
 } from "@/lib/tier";
 
 describe("Creator tier assignment", () => {
-  it("returns null for under 1,000 followers", () => {
+  it("returns null for under 10,000 followers", () => {
     expect(getCreatorTier(0)).toBeNull();
-    expect(getCreatorTier(500)).toBeNull();
-    expect(getCreatorTier(999)).toBeNull();
+    expect(getCreatorTier(5000)).toBeNull();
+    expect(getCreatorTier(9999)).toBeNull();
   });
 
-  it("assigns Micro tier for 1,000-9,999 followers", () => {
-    expect(getCreatorTier(1000)).toBe("micro");
-    expect(getCreatorTier(5000)).toBe("micro");
-    expect(getCreatorTier(9999)).toBe("micro");
+  it("assigns Micro tier for 10,000-99,999 followers", () => {
+    expect(getCreatorTier(10000)).toBe("micro");
+    expect(getCreatorTier(50000)).toBe("micro");
+    expect(getCreatorTier(99999)).toBe("micro");
   });
 
-  it("assigns Mid tier for 10,000-99,999 followers", () => {
-    expect(getCreatorTier(10000)).toBe("mid");
-    expect(getCreatorTier(50000)).toBe("mid");
-    expect(getCreatorTier(99999)).toBe("mid");
+  it("assigns Mid tier for 100,000-999,999 followers", () => {
+    expect(getCreatorTier(100000)).toBe("mid");
+    expect(getCreatorTier(500000)).toBe("mid");
+    expect(getCreatorTier(999999)).toBe("mid");
   });
 
-  it("assigns Macro tier for 100,000+ followers", () => {
-    expect(getCreatorTier(100000)).toBe("macro");
-    expect(getCreatorTier(500000)).toBe("macro");
+  it("assigns Macro tier for 1,000,000+ followers", () => {
+    expect(getCreatorTier(1000000)).toBe("macro");
+    expect(getCreatorTier(5000000)).toBe("macro");
     expect(getCreatorTier(10000000)).toBe("macro");
   });
 });

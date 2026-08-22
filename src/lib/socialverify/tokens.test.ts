@@ -123,9 +123,9 @@ describe("needsRotation", () => {
 
 describe("PLATFORM_THRESHOLDS", () => {
   it("has the four platform minimums", () => {
-    expect(PLATFORM_THRESHOLDS.youtube).toBe(1000);
-    expect(PLATFORM_THRESHOLDS.tiktok).toBe(5000);
-    expect(PLATFORM_THRESHOLDS.instagram).toBe(3000);
-    expect(PLATFORM_THRESHOLDS.twitter).toBe(2500);
+    expect(PLATFORM_THRESHOLDS.youtube).toBe(10000);
+    expect(PLATFORM_THRESHOLDS.tiktok).toBe(10000);
+    expect(PLATFORM_THRESHOLDS.instagram).toBe(10000);
+    expect(PLATFORM_THRESHOLDS.twitter).toBe(10000);
   });
 });

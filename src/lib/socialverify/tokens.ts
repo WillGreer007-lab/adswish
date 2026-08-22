@@ -16,10 +16,10 @@ export const PLATFORM_CODES: Record<SocialPlatform, string> = {
 };
 
 export const PLATFORM_THRESHOLDS: Record<SocialPlatform, number> = {
-  youtube: 1000,
-  tiktok: 5000,
-  instagram: 3000,
-  twitter: 2500,
+  youtube: 10000,
+  tiktok: 10000,
+  instagram: 10000,
+  twitter: 10000,
 };
 
 export const DEFAULT_EXPIRY_HOURS = 168; // 7 days
