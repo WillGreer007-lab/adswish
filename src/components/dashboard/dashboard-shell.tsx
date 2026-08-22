@@ -15,6 +15,7 @@ import {
   Crown,
   Puzzle,
   Target,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
@@ -41,6 +42,7 @@ const CREATOR_NAV = [
 const BUSINESS_NAV = [
   { label: "Overview", href: "/dashboard/business", icon: LayoutDashboard },
   { label: "Campaigns", href: "/dashboard/business/campaigns", icon: Megaphone },
+  { label: "Verification", href: "/dashboard/business/campaigns/verification", icon: ShieldCheck },
   { label: "Applicants", href: "/dashboard/business/applicants", icon: Users },
   { label: "Payments", href: "/dashboard/business/payments", icon: DollarSign },
   { label: "Analytics", href: "/dashboard/business/analytics", icon: BarChart3 },
