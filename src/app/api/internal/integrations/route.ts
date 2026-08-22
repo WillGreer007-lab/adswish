@@ -49,16 +49,23 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: rows } = await supabase
-    .from("user_integrations")
-    .select("integration_key, added_at")
-    .eq("user_id", user.id);
+  const [addedRows, waitlistRows] = await Promise.all([
+    supabase
+      .from("user_integrations")
+      .select("integration_key, added_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("integration_waitlist")
+      .select("integration_key")
+      .eq("user_id", user.id),
+  ]);
 
   return NextResponse.json({
-    added: (rows ?? []).map((r: { integration_key: string; added_at: string }) => ({
+    added: (addedRows.data ?? []).map((r: { integration_key: string; added_at: string }) => ({
       key: r.integration_key,
       addedAt: r.added_at,
     })),
+    waitlist: (waitlistRows.data ?? []).map((r: { integration_key: string }) => r.integration_key),
   });
 }
 
@@ -69,10 +76,19 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = (await request.json().catch(() => ({}))) as { key?: string };
+  const body = (await request.json().catch(() => ({}))) as { key?: string; notify?: boolean };
   const key = body.key;
   if (!key || !OPTIONAL_KEYS.has(key)) {
     return NextResponse.json({ error: "Unknown integration" }, { status: 400 });
+  }
+
+  // "Notify me" for not-yet-available integrations: record interest only.
+  if (body.notify) {
+    const { error: waitlistError } = await supabase
+      .from("integration_waitlist")
+      .upsert({ user_id: user.id, integration_key: key }, { onConflict: "user_id,integration_key" });
+    if (waitlistError) return NextResponse.json({ error: waitlistError.message }, { status: 500 });
+    return NextResponse.json({ ok: true, notified: key });
   }
 
   const planSlug = await getPlanSlug(supabase, user.id);

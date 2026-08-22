@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, Check, Plus, Trash2, Loader2 } from "lucide-react";
+import { Lock, Check, Plus, Trash2, Loader2, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   CRITICAL_INTEGRATIONS,
@@ -75,20 +75,24 @@ function CoreCard({ integration }: { integration: IntegrationDef }) {
   );
 }
 
-type AddState = "idle" | "adding" | "removing";
+type AddState = "idle" | "adding" | "removing" | "notifying";
 
 function OptionalCard({
   integration,
   added,
+  waitlisted,
   busy,
   onAdd,
   onRemove,
+  onNotify,
 }: {
   integration: IntegrationDef;
   added: boolean;
+  waitlisted: boolean;
   busy: AddState;
   onAdd: () => void;
   onRemove: () => void;
+  onNotify: () => void;
 }) {
   return (
     <div
@@ -110,6 +114,10 @@ function OptionalCard({
           <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-semibold text-success">
             <Check className="h-3.5 w-3.5" /> Added
           </span>
+        ) : waitlisted ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Bell className="h-3.5 w-3.5" /> We&apos;ll notify you
+          </span>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             Not connected
@@ -129,7 +137,7 @@ function OptionalCard({
             )}
             Remove
           </button>
-        ) : (
+        ) : integration.available ? (
           <button
             onClick={onAdd}
             disabled={busy === "adding"}
@@ -142,6 +150,21 @@ function OptionalCard({
             )}
             Add
           </button>
+        ) : (
+          <button
+            onClick={onNotify}
+            disabled={waitlisted || busy === "notifying"}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
+          >
+            {busy === "notifying" ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : waitlisted ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Bell className="h-3.5 w-3.5" />
+            )}
+            {waitlisted ? "Notified" : "Notify me"}
+          </button>
         )}
       </div>
     </div>
@@ -153,6 +176,7 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
   const criticalCount = CRITICAL_INTEGRATIONS.length;
 
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [waitlist, setWaitlist] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<Record<string, AddState>>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -167,8 +191,9 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
       try {
         const res = await fetch("/api/internal/integrations", { cache: "no-store" });
         if (res.ok) {
-          const data = (await res.json()) as { added: { key: string }[] };
+          const data = (await res.json()) as { added: { key: string }[]; waitlist?: string[] };
           setAdded(new Set(data.added.map((r) => r.key)));
+          setWaitlist(new Set(data.waitlist ?? []));
         }
       } catch {
         /* offline — keep the empty state */
@@ -222,6 +247,28 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
       });
     } catch {
       setApiError("Network error — could not remove integration.");
+    } finally {
+      setBusy((b) => ({ ...b, [key]: "idle" }));
+    }
+  }
+
+  async function notifyIntegration(key: string) {
+    setBusy((b) => ({ ...b, [key]: "notifying" }));
+    setApiError(null);
+    try {
+      const res = await fetch("/api/internal/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, notify: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setApiError(data.error ?? "Could not subscribe to updates.");
+        return;
+      }
+      setWaitlist((prev) => new Set(prev).add(key));
+    } catch {
+      setApiError("Network error — could not subscribe to updates.");
     } finally {
       setBusy((b) => ({ ...b, [key]: "idle" }));
     }
@@ -288,9 +335,11 @@ export function IntegrationHub({ planSlug, planName }: { planSlug: string; planN
                 key={i.key}
                 integration={i}
                 added={added.has(i.key)}
+                waitlisted={waitlist.has(i.key)}
                 busy={busy[i.key] ?? "idle"}
                 onAdd={() => addIntegration(i.key)}
                 onRemove={() => removeIntegration(i.key)}
+                onNotify={() => notifyIntegration(i.key)}
               />
             ))}
           </div>
