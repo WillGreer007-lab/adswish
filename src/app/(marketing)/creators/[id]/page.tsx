@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient, createSupabaseServiceRoleClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Users, Video, Youtube, Instagram, Music2, ShieldCheck, CheckCircle2, Crown, RefreshCw } from "lucide-react";
+import { Star, Users, Video, Youtube, Instagram, Music2, ShieldCheck, CheckCircle2, Crown, RefreshCw, Globe, Twitter, Twitch, ExternalLink } from "lucide-react";
 import { TIER_META, type Tier } from "@/lib/tier";
 import { ConnectButton } from "@/components/dashboard/connect-button";
 import { SectionLabel } from "@/components/ui/info-tooltip";
+import { socialProfileUrl, isValidHttpUrl } from "@/lib/creator-links";
 
 export async function generateMetadata({
   params,
@@ -212,6 +213,23 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
   const plan = planConfig[planSlug] || planConfig.creator_free;
   const fullName = profile.display_name;
 
+  // Header link buttons: website + Twitter/X + Twitch from the profile, and
+  // Instagram/TikTok/YouTube derived from connected account handles.
+  const links: { label: string; href: string; Icon: React.ComponentType<{ className?: string }> }[] = [];
+  if (isValidHttpUrl(profile.website_url)) links.push({ label: "Website", href: profile.website_url!, Icon: Globe });
+  const platformLinkMeta: Record<string, { label: string; Icon: React.ComponentType<{ className?: string }> }> = {
+    instagram: { label: "Instagram", Icon: Instagram },
+    tiktok: { label: "TikTok", Icon: Music2 },
+    youtube: { label: "YouTube", Icon: Youtube },
+  };
+  for (const acc of socialAccounts ?? []) {
+    const meta = platformLinkMeta[acc.platform];
+    const url = socialProfileUrl(acc.platform, acc.handle);
+    if (meta && url) links.push({ label: meta.label, href: url, Icon: meta.Icon });
+  }
+  if (isValidHttpUrl(profile.twitter_url)) links.push({ label: "Twitter / X", href: profile.twitter_url!, Icon: Twitter });
+  if (isValidHttpUrl(profile.twitch_url)) links.push({ label: "Twitch", href: profile.twitch_url!, Icon: Twitch });
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
@@ -264,6 +282,23 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
           <div className="mt-4">
             <ConnectButton targetUserId={id} targetHandle={handle} />
           </div>
+          {links.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+              {links.map((l) => (
+                <a
+                  key={l.label}
+                  href={l.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  <l.Icon className="h-3.5 w-3.5" />
+                  {l.label}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -279,12 +314,12 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
         </div>
       )}
 
-      {/* Social accounts */}
-      {socialAccounts && socialAccounts.length > 0 && (
+      {/* Social accounts + website */}
+      {(socialAccounts && socialAccounts.length > 0) || isValidHttpUrl(profile.website_url) ? (
         <div className="mt-6">
           <SectionLabel title="Connected accounts" hint="Live social channels with auto-synced follower counts; Verified means we confirmed the account." />
           <div className="grid gap-3 sm:grid-cols-3">
-            {socialAccounts.map((acc) => {
+            {socialAccounts?.map((acc) => {
               const Icon = platformIcons[acc.platform] || Users;
               return (
                 <Card key={acc.id}>
@@ -308,9 +343,33 @@ export default async function CreatorProfilePage({ params }: { params: Promise<{
                 </Card>
               );
             })}
+            {isValidHttpUrl(profile.website_url) && (
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Website</p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-semibold text-success">
+                      <ShieldCheck className="h-3 w-3" />
+                      Active
+                    </span>
+                  </div>
+                  <a
+                    href={profile.website_url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block max-w-full truncate text-sm font-medium text-primary hover:underline"
+                  >
+                    {profile.website_url!.replace(/^https?:\/\//, "")}
+                  </a>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Portfolio */}
       <div className="mt-6">

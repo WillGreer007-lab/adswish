@@ -30,6 +30,9 @@ export default function CreatorProfileSetup() {
   const [bio, setBio] = useState("");
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [website, setWebsite] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [twitch, setTwitch] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
@@ -43,7 +46,7 @@ export default function CreatorProfileSetup() {
 
       const { data: profile } = await supabase
         .from("creator_profiles")
-        .select("display_name, bio, niches, profile_picture_url")
+        .select("display_name, bio, niches, profile_picture_url, website_url, twitter_url, twitch_url")
         .eq("user_id", user.id)
         .single();
 
@@ -51,6 +54,9 @@ export default function CreatorProfileSetup() {
         setDisplayName(profile.display_name || "");
         setBio(profile.bio || "");
         setSelectedNiches(profile.niches || []);
+        setWebsite(profile.website_url || "");
+        setTwitter(profile.twitter_url || "");
+        setTwitch(profile.twitch_url || "");
       }
     }
     loadProfile();
@@ -100,6 +106,9 @@ export default function CreatorProfileSetup() {
         bio,
         niches: selectedNiches,
         profile_picture_url: profilePictureUrl,
+        website_url: website || null,
+        twitter_url: twitter || null,
+        twitch_url: twitch || null,
         account_status: "active",
         onboarding_step: "connect_social",
       }, { onConflict: "user_id" });
@@ -170,6 +179,37 @@ export default function CreatorProfileSetup() {
               maxLength={500}
             />
             <p className="text-right text-xs text-muted-foreground">{bio.length}/500</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="website">Website (optional)</Label>
+            <Input
+              id="website"
+              placeholder="https://your-site.com"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="twitter">Twitter / X (optional)</Label>
+              <Input
+                id="twitter"
+                placeholder="https://x.com/yourhandle"
+                value={twitter}
+                onChange={(e) => setTwitter(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="twitch">Twitch (optional)</Label>
+              <Input
+                id="twitch"
+                placeholder="https://twitch.tv/yourchannel"
+                value={twitch}
+                onChange={(e) => setTwitch(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

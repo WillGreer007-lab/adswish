@@ -6,6 +6,7 @@ import { Sparkles, CheckCircle2, Crown, ShieldCheck } from "lucide-react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { AvatarUpload } from "@/components/dashboard/avatar-upload";
 import { VerificationMethods } from "@/components/dashboard/verification-methods";
+import { CreatorLinksEditor } from "@/components/dashboard/creator-links-editor";
 import { tierColor, tierLabel } from "@/lib/tier";
 
 export default async function CreatorProfilePage({
@@ -119,6 +120,17 @@ export default async function CreatorProfilePage({
         <div className="rounded-lg border border-border bg-surface p-5">
           <h3 className="mb-3 font-heading text-sm font-semibold">Profile picture</h3>
           <AvatarUpload role="creator" currentUrl={profile.profile_picture_url} name={profile.display_name} />
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface p-5">
+          <h3 className="mb-3 font-heading text-sm font-semibold">Links</h3>
+          <CreatorLinksEditor
+            initial={{
+              website_url: profile.website_url ?? null,
+              twitter_url: profile.twitter_url ?? null,
+              twitch_url: profile.twitch_url ?? null,
+            }}
+          />
         </div>
 
         <div className="rounded-lg border border-border bg-surface p-5">
