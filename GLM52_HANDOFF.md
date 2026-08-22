@@ -1,6 +1,6 @@
 # GLM 5.2 — Handoff from Freebuff (Buffy)
 
-## Latest — Scoped UptimeRobot demo mapping and outage alerts (Aug 22, local preview; not pushed)
+## Latest — Scoped UptimeRobot demo mapping and outage alerts (Aug 22, pushed fc06e80; Vercel READY)
 
 - **Migration 057 applied:** `supabase/migrations/057_uptime_monitor_alerts.sql` expands the existing in-app notification type check with `uptime_outage`, adds service-role-only `uptime_monitor_states`, and schedules `check-mapped-uptime-monitors` every 10 minutes. The cron job sends only the configured monitor-scoped key to explicitly mapped monitor IDs.
 - **Migration 058 applied:** `supabase/migrations/058_uptime_monitor_check_history.sql` adds service-role-only `uptime_monitor_checks` for real scoped poll observations. It does not create synthetic incidents or expose monitor metadata through client RLS.
@@ -9,7 +9,7 @@
 - **Designated live demo:** `Buffy GA Test Co` (`biz-ga-test@adswish.test`) is mapped to real monitor `803802534`; the monitor returned status **up**. The worker was triggered through `/api/internal/cron`, returning `key_configured=true`, `mapped=1`, `checked=1`, `alerts_sent=0`, `errors=0`; Supabase state is `last_status=2`, `last_alert_state=up`, and real local poll history is present. The previous temporary mapping was cleared.
 - **Authenticated preview walkthrough:** local business login → Business → Tracking showed the third **Mapped UptimeRobot monitor** tick green with `adswish-lake.vercel.app — up`; expanded diagnostics showed application/database reachable, monitor mapping found, and external monitor up. `/status` showed “All systems operational”; notification settings showed the new uptime category.
 - **Important limitation:** UptimeRobot returned zero historical log entries for the scoped demo key at fixture time. The admin page therefore shows the real local poll history and truthfully reports no incidents; it does not invent outage data. A real outage/recovery transition will create the corresponding in-app notification.
-- **Verification:** typecheck ✓ · lint 0 errors (5 existing warnings) · **279 tests** ✓ · build ✓. The new code/migrations are **not pushed** in this turn; the prior deployed production commit remains `283be53` until an explicit push is approved.
+- **Verification and publish:** typecheck ✓ · lint 0 errors (5 existing warnings) · **282 tests** ✓ · build ✓. Commit `fc06e80` was pushed to `origin/main`; Vercel deployment `dpl_3vXcxGKQVVVqgda7yQc7JirM4EDH` reached READY and aliased `adswish-lake.vercel.app`. The refreshed encrypted `UPTIME_ROBOT_MONITOR_API_KEY` is configured for Preview + Production, and the live cron smoke test returned `key_configured=true`, `mapped=1`, `checked=1`, `alerts_sent=0`, `errors=0`.
 
 ---
 
