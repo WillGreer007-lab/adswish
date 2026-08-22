@@ -21,8 +21,11 @@ export function VerificationMethods({ initial }: { initial: SocialAccount[] }) {
   const [method, setMethod] = useState<VerificationMethod | null>(null);
   const [verifications, setVerifications] = useState<{ status: "pending" | "approved" | "rejected" }[]>([]);
   // OAuth callbacks redirect back to the profile with ?error=... — read once.
+  // `window` is unavailable during SSR, so guard it.
   const [oauthError] = useState(
-    () => new URLSearchParams(window.location.search).get("error") !== null,
+    () =>
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("error") !== null,
   );
 
   useEffect(() => {
